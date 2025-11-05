@@ -57,3 +57,14 @@
 
 ## 免责声明
 请勿将`spider-flow`应用到任何可能会违反法律规定和道德约束的工作中，请友善使用`spider-flow`，遵守蜘蛛协议，不要将`spider-flow`用于任何非法用途。如您选择使用`spider-flow`即代表您遵守此协议，作者不承担任何由于您违反此协议带来任何的法律风险和损失，一切后果由您承担。
+
+## 法律与许可
+> 请在使用或分发本项目前，务必阅读并遵守以下文件。
+
+- 上游/第三方代码遵循 `MIT License`（详见根目录 `LICENSE`）。
+- 本项目维护者新增或修改的代码遵循《`LICENSE.responsible-use`》负责任使用许可。
+- 分发或二次开发时，需同时保留并遵守：`LICENSE`、`LICENSE.responsible-use` 与 `THIRD-PARTY-NOTICES.md`。
+- 使用本项目时，必须遵守目标网站的服务条款（ToS）、访问政策与 `robots.txt`，不得规避登录、验证码、付费墙、速率限制等技术保护措施。
+- 建议先阅读：`AUP.md`（可接受使用政策）与 `DISCLAIMER.md`（免责声明与风险提示）。
+
+提示：`LICENSE.responsible-use` 含使用限制，不符合 OSI 的“开源许可证”定义；上游代码仍按 MIT 使用。
