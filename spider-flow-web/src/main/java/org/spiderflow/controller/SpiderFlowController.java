@@ -24,10 +24,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
@@ -39,6 +44,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * 爬虫Controller
@@ -166,6 +173,86 @@ public class SpiderFlowController {
 	@RequestMapping("/xml")
 	public String xml(String id){
 		return spiderFlowService.getById(id).getXml();
+	}
+
+	/**
+	 * 导出爬虫为 xml 或 json 文件下载
+	 */
+	@RequestMapping("/export")
+	public ResponseEntity<ByteArrayResource> export(String id, @RequestParam(name = "format", defaultValue = "xml") String format){
+		SpiderFlow flow = spiderFlowService.getById(id);
+		if(flow == null){
+			return ResponseEntity.badRequest().body(new ByteArrayResource("flow not found".getBytes()));
+		}
+		String filename;
+		byte[] bytes;
+		MediaType mediaType;
+		String displayName = flow.getName() == null ? "spider" : flow.getName();
+		// 如果名称形如 “原名-副本-XXXX”，导出文件名统一为 “原名-副本”
+		String baseName = displayName.replaceFirst("(.+?)-副本-\\d{4,}$", "$1");
+		String exportName = baseName.equals(displayName) ? displayName : (baseName + "-副本");
+		System.out.println(exportName);
+		if("json".equalsIgnoreCase(format)){
+			String json = "{\"name\":\"" + (flow.getName() == null ? "": flow.getName()) + "\",\"id\":\"" + flow.getId() + "\",\"xml\":" + com.alibaba.fastjson.JSON.toJSONString(flow.getXml()) + "}";
+			filename = exportName + ".json";
+			bytes = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+			mediaType = MediaType.APPLICATION_JSON;
+		}else{
+			String xml = flow.getXml();
+			filename = exportName + ".xml";
+			bytes = xml.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+			mediaType = MediaType.TEXT_XML;
+		}
+		return ResponseEntity.ok()
+				.header("Content-Disposition", ContentDisposition.builder("attachment").filename(filename, java.nio.charset.StandardCharsets.UTF_8).build().toString())
+				.contentType(mediaType)
+				.body(new ByteArrayResource(bytes));
+	}
+
+	/**
+	 * 导入爬虫文件（xml/json）并创建新爬虫
+	 */
+	@PostMapping(path = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public JsonBean<String> importFlow(@RequestPart("file") MultipartFile file, @RequestParam(name = "name", required = false) String name){
+		if(file == null || file.isEmpty()){
+			return new JsonBean<>(0, "文件为空");
+		}
+		String filename = file.getOriginalFilename();
+		String content;
+		try {
+			content = new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
+		} catch (Exception e){
+			logger.error("读取导入文件失败", e);
+			return new JsonBean<>(-1, "读取文件失败");
+		}
+		String xml;
+		if(filename != null && filename.toLowerCase().endsWith(".json")){
+			try{
+				com.alibaba.fastjson.JSONObject obj = com.alibaba.fastjson.JSON.parseObject(content);
+				xml = obj.getString("xml");
+				if(StringUtils.isBlank(name)){
+					name = obj.getString("name");
+				}
+			}catch(Exception e){
+				return new JsonBean<>(-1, "JSON 格式不正确");
+			}
+		}else{
+			xml = content;
+		}
+		if(StringUtils.isBlank(xml)){
+			return new JsonBean<>(0, "未找到有效的流程 XML");
+		}
+		if(StringUtils.isBlank(name)){
+			String suffix = Integer.toString(new java.util.Random().nextInt(9000) + 1000);
+			name = "导入副本-" + suffix;
+		}
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+		name = name + "-" + LocalDateTime.now().format(formatter);
+		SpiderFlow flow = new SpiderFlow();
+		flow.setName(name);
+		flow.setXml(xml);
+		spiderFlowService.save(flow);
+		return new JsonBean<>(flow.getId());
 	}
 
 	@RequestMapping("/log/download")

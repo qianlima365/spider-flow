@@ -138,10 +138,12 @@ public class SpiderFlowService extends ServiceImpl<SpiderFlowMapper, SpiderFlow>
 	}
 
 	public void copy(String id){
-		// 复制ID
+		// 复制当前流程，名称追加“副本”与随机后缀
 		SpiderFlow spiderFlow = sfMapper.selectById(id);
-		String new_id = UUID.randomUUID().toString().replace("-", "");
-		sfMapper.insertSpiderFlow(new_id, spiderFlow.getName() + "-copy", spiderFlow.getXml());
+		String newId = UUID.randomUUID().toString().replace("-", "");
+		String suffix = Integer.toString(new Random().nextInt(9000) + 1000);
+		String newName = (spiderFlow.getName() == null ? "SpiderFlow" : spiderFlow.getName()) + "-副本-" + suffix;
+		sfMapper.insertSpiderFlow(newId, newName, spiderFlow.getXml());
 	}
 
 	public void start(String id){
