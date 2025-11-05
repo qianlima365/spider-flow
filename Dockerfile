@@ -1,6 +1,4 @@
-FROM java:8
-
-MAINTAINER octopus
+FROM openjdk:8
 
 RUN mkdir -p /spider-flow
 

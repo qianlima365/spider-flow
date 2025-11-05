@@ -17,6 +17,30 @@
 			<groupId>org.spiderflow</groupId>
 			<artifactId>spider-flow-core</artifactId>
 		</dependency>
+        <dependency>
+            <groupId>org.spiderflow</groupId>
+            <artifactId>spider-flow-mongodb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.spiderflow</groupId>
+            <artifactId>spider-flow-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.spiderflow</groupId>
+            <artifactId>spider-flow-oss</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.spiderflow</groupId>
+            <artifactId>spider-flow-ocr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.spiderflow</groupId>
+            <artifactId>spider-flow-mailbox</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.spiderflow</groupId>
+            <artifactId>spider-flow-elasticsearch</artifactId>
+        </dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -29,5 +53,14 @@
 				</configuration>
 			</plugin>
 		</plugins>
+<!--        <resources>-->
+<!--            <resource>-->
+<!--                <directory>lib</directory>-->
+<!--                <targetPath>/BOOT-INF/lib/</targetPath>-->
+<!--                <includes>-->
+<!--                    <include>**/*.jar</include>-->
+<!--                </includes>-->
+<!--            </resource>-->
+<!--        </resources>-->
 	</build>
 </project>

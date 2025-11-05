@@ -162,6 +162,11 @@
 				<artifactId>spider-flow-mailbox</artifactId>
 				<version>${spider-flow.version}</version>
 			</dependency>
+            <dependency>
+                <groupId>org.spiderflow</groupId>
+                <artifactId>spider-flow-elasticsearch</artifactId>
+                <version>${spider-flow.version}</version>
+            </dependency>
 		</dependencies>
 	</dependencyManagement>
 	<modules>

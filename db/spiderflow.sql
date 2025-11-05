@@ -1,8 +1,4 @@
-SET FOREIGN_KEY_CHECKS=0;
-
-CREATE DATABASE spiderflow;
 USE spiderflow;
-
 DROP TABLE IF EXISTS `sp_flow`;
 CREATE TABLE `sp_flow` (
   `id` varchar(32) NOT NULL,
@@ -76,3 +72,69 @@ CREATE TABLE `sp_flow_notice` (
   `end_notice` char(1) DEFAULT '0' COMMENT '流程结束通知:1:开启通知,0:关闭通知',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '爬虫任务通知表';
+
+
+DROP TABLE IF EXISTS `sp_elasticsearch`;
+CREATE TABLE `sp_elasticsearch` (
+  `id` varchar(32) NOT NULL,
+  `host` varchar(64) DEFAULT NULL,
+  `alias` varchar(64) DEFAULT NULL,
+  `port` int(11) DEFAULT NULL,
+  `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  `username` varchar(32) DEFAULT NULL,
+  `password` varchar(32) DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=COMPACT;
+
+DROP TABLE IF EXISTS `sp_mongo`;
+CREATE TABLE `sp_mongo` (
+  `id` varchar(32) NOT NULL,
+  `name` varchar(64) DEFAULT NULL,
+  `alias` varchar(32) DEFAULT NULL,
+  `host` varchar(64) DEFAULT NULL,
+  `port` int(6) DEFAULT NULL,
+  `database` varchar(64) DEFAULT NULL,
+  `username` varchar(32) DEFAULT NULL,
+  `password` varchar(32) DEFAULT NULL,
+  `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `sp_ocr`;
+CREATE TABLE `sp_ocr` (
+  `id` int(6) NOT NULL AUTO_INCREMENT,
+  `ocr_name` varchar(64) DEFAULT NULL,
+  `app_id` varchar(64) DEFAULT NULL,
+  `api_key` varchar(255) DEFAULT NULL,
+  `secret_key` varchar(255) DEFAULT NULL,
+  `ocr_type` char(1) DEFAULT '1' COMMENT '1:百度,其它待定',
+  `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
+
+DROP TABLE IF EXISTS `sp_oss`;
+CREATE TABLE `sp_oss` (
+  `oss_id` varchar(50) NOT NULL COMMENT '主键id，用户自己输入',
+  `endpoint` varchar(100) DEFAULT NULL,
+  `access_key_id` varchar(100) DEFAULT NULL,
+  `access_key_secret` varchar(100) DEFAULT NULL,
+  `bucket_name` varchar(100) DEFAULT NULL,
+  `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`oss_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
+
+DROP TABLE IF EXISTS `sp_redis`;
+CREATE TABLE `sp_redis` (
+  `id` varchar(32) NOT NULL,
+  `host` varchar(64) DEFAULT NULL,
+  `alias` varchar(64) DEFAULT NULL,
+  `name` varchar(64) DEFAULT NULL,
+  `port` int(6) DEFAULT NULL,
+  `password` varchar(64) DEFAULT NULL,
+  `db_index` int(6) DEFAULT NULL,
+  `max_connections` int(6) DEFAULT NULL,
+  `max_idle` int(6) DEFAULT NULL,
+  `min_idle` int(6) DEFAULT NULL,
+  `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

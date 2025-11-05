@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  spider-flow:
+    image: spider-flow:0.5.0
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./data:/spider-flow/data
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    restart: always
+
+  mysql:
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=spiderflow
+      - MYSQL_DATABASE=spiderflow
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: always
+
+volumes:
+  mysql-data:
