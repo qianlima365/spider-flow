@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>系统管理 - 用户与团队</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    /* 样式作用域：仅在 #admin-app 容器下生效，避免影响其他页面 */
+    #admin-app { font-family: Arial, sans-serif; background: #f5f7fa; min-height: 100vh; }
+    .admin-header { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #001529; color: #fff; }
+    .admin-title { font-size: 16px; font-weight: bold; }
+    .admin-actions { display: flex; align-items: center; gap: 8px; }
+    .admin-avatar { width: 28px; height: 28px; border-radius: 50%; background: #1890ff; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; }
+    .admin-layout { display: grid; grid-template-columns: 220px 1fr; }
+    .admin-sider { background: #fff; border-right: 1px solid #eaeaea; min-height: calc(100vh - 56px); }
+    .admin-menu { list-style: none; margin: 0; padding: 8px; }
+    .admin-menu li { padding: 10px 12px; border-radius: 4px; cursor: pointer; }
+    .admin-menu li:hover, .admin-menu li.active { background: #e6f7ff; color: #1890ff; }
+    .admin-content { padding: 16px; }
+    .admin-card { background: #fff; border: 1px solid #eaeaea; border-radius: 6px; margin-bottom: 16px; }
+    .admin-card .admin-card-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-weight: 600; }
+    .admin-card .admin-card-body { padding: 12px 16px; }
+    .admin-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .admin-input, .admin-select, .admin-btn { margin: 4px 0; padding: 6px 8px; }
+    .admin-input, .admin-select { border: 1px solid #d9d9d9; border-radius: 4px; outline: none; }
+    .admin-input:focus, .admin-select:focus { border-color: #1890ff; }
+    .admin-btn { background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .admin-btn.secondary { background: #52c41a; }
+    .admin-btn.danger { background: #ff4d4f; }
+    .admin-table { border-collapse: collapse; width: 100%; }
+    .admin-table th, .admin-table td { border: 1px solid #eee; padding: 8px; }
+    .admin-table th { background: #fafafa; }
+    .admin-muted { color: #666; font-size: 12px; }
+    /* 简易弹窗样式（仅作用于 admin 页） */
+    .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .admin-modal .admin-modal-content { width: 520px; max-width: 90vw; background: #fff; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.2); overflow: hidden; }
+    .admin-modal-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-weight: 600; }
+    .admin-modal-body { padding: 12px 16px; }
+    .admin-modal-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; justify-content: flex-end; }
+    .admin-form-row { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+    .admin-form-row label { width: 92px; color: #555; }
+  </style>
+</head>
+<body>
+<div id="admin-app">
+  <div class="admin-header">
+    <div class="admin-title">系统管理</div>
+    <div class="admin-actions">
+      <div id="admin-avatar" class="admin-avatar">U</div>
+      <div id="admin-name">未登录</div>
+    </div>
+  </div>
+  <div class="admin-layout">
+    <aside class="admin-sider">
+      <ul class="admin-menu">
+        <li data-tab="users">用户管理</li>
+        <li data-tab="teams">团队管理</li>
+      </ul>
+    </aside>
+    <main class="admin-content">
+      <div class="admin-card" data-panel="users" style="display:none;">
+        <div class="admin-card-header">用户管理</div>
+        <div class="admin-card-body">
+          <div class="admin-row" style="justify-content: space-between;">
+            <div class="admin-row" style="flex:1;">
+              <input class="admin-input" id="u-q" placeholder="搜索用户名" style="flex:1;"/>
+              <button class="admin-btn secondary" onclick="loadUsers()">搜索</button>
+            </div>
+            <div>
+              <button class="admin-btn" onclick="openUserModal()">添加用户</button>
+            </div>
+          </div>
+          <table class="admin-table">
+            <thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+          <div class="admin-row" style="justify-content: space-between; align-items: center; margin-top: 8px;">
+            <div class="admin-muted" id="users-page-info"></div>
+            <div class="admin-pagination" id="users-pagination"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-card" data-panel="teams" style="display:none;">
+        <div class="admin-card-header">团队管理</div>
+        <div class="admin-card-body">
+          <div class="admin-row" style="justify-content: space-between;">
+            <div class="admin-row" style="flex:1;">
+              <input class="admin-input" id="t-q" placeholder="搜索团队名称" style="flex:1;"/>
+              <button class="admin-btn secondary" onclick="loadTeams()">搜索</button>
+            </div>
+            <div>
+              <button class="admin-btn" onclick="openTeamModal()">添加团队</button>
+            </div>
+          </div>
+          <table class="admin-table">
+            <thead><tr><th>ID</th><th>名称</th><th>Owner</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="teams-tbody"></tbody>
+          </table>
+
+          <div style="margin-top:12px;font-weight:600;">团队成员</div>
+          <div class="admin-row">
+            <input class="admin-input" id="tm-teamId" placeholder="团队ID" />
+            <input class="admin-input" id="tm-userId" placeholder="用户ID" />
+            <select class="admin-select" id="tm-role">
+              <option value="MEMBER">MEMBER</option>
+              <option value="MAINTAINER">MAINTAINER</option>
+            </select>
+            <button class="admin-btn" onclick="addMember()">添加成员</button>
+            <button class="admin-btn secondary" onclick="listMembers()">查看成员</button>
+          </div>
+          <table class="admin-table">
+            <thead><tr><th>成员ID</th><th>用户ID</th><th>角色</th><th>操作</th></tr></thead>
+            <tbody id="members-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+  <!-- 用户创建弹窗 -->
+  <div class="admin-modal" id="user-modal">
+    <div class="admin-modal-content">
+      <div class="admin-modal-header">添加用户</div>
+      <div class="admin-modal-body">
+        <div class="admin-form-row">
+          <label for="um-username">用户名</label>
+          <input class="admin-input" id="um-username" placeholder="请输入用户名" />
+        </div>
+        <div class="admin-form-row">
+          <label for="um-password">密码</label>
+          <input class="admin-input" id="um-password" placeholder="请输入密码" />
+        </div>
+        <div class="admin-form-row">
+          <label for="um-role">角色</label>
+          <select class="admin-select" id="um-role">
+            <option value="USER">USER</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="admin-btn secondary" onclick="submitUserModal()">保存</button>
+        <button class="admin-btn danger" onclick="closeUserModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 团队创建弹窗 -->
+  <div class="admin-modal" id="team-modal">
+    <div class="admin-modal-content">
+      <div class="admin-modal-header">添加团队</div>
+      <div class="admin-modal-body">
+        <div class="admin-form-row">
+          <label for="tmod-name">团队名称</label>
+          <input class="admin-input" id="tmod-name" placeholder="请输入团队名称" />
+        </div>
+        <div class="admin-form-row">
+          <label for="tmod-owner">Owner用户ID</label>
+          <input class="admin-input" id="tmod-owner" placeholder="请输入Owner用户ID" />
+        </div>
+        <div class="admin-form-row">
+          <label for="tmod-owner-q">Owner选择</label>
+          <input class="admin-input" id="tmod-owner-q" placeholder="搜索用户名以选择 Owner" style="flex:1;" />
+          <button class="admin-btn secondary" onclick="searchOwnerCandidates()">搜索</button>
+        </div>
+        <div class="admin-muted">已选择 Owner：<span id="tmod-owner-name">未选择</span></div>
+        <table class="admin-table" style="margin-top:8px;">
+          <thead><tr><th>ID</th><th>用户名</th><th>操作</th></tr></thead>
+          <tbody id="tmod-owner-tbody"></tbody>
+        </table>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="admin-btn secondary" onclick="submitTeamModal()">保存</button>
+        <button class="admin-btn danger" onclick="closeTeamModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成员添加弹窗 -->
+  <div class="admin-modal" id="member-modal">
+    <div class="admin-modal-content">
+      <div class="admin-modal-header">添加团队成员</div>
+      <div class="admin-modal-body">
+        <input type="hidden" id="mm-teamId" />
+        <div class="admin-form-row">
+          <label for="mm-role">成员角色</label>
+          <select class="admin-select" id="mm-role">
+            <option value="MEMBER">MEMBER</option>
+            <option value="MAINTAINER">MAINTAINER</option>
+          </select>
+        </div>
+        <div class="admin-form-row">
+          <label for="mm-q">搜索用户</label>
+          <input class="admin-input" id="mm-q" placeholder="按用户名搜索" style="flex:1;" />
+          <button class="admin-btn secondary" onclick="searchMemberCandidates()">搜索</button>
+        </div>
+        <table class="admin-table" style="margin-top:8px;">
+          <thead><tr><th>ID</th><th>用户名</th><th>操作</th></tr></thead>
+          <tbody id="mm-users-tbody"></tbody>
+        </table>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="admin-btn danger" onclick="closeMemberModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* 分页样式 */
+  (function(){
+    const style = document.createElement('style');
+    style.textContent = 
+    `.admin-pagination{display:flex;gap:8px;align-items:center;}
+      .admin-page-btn{padding:4px 10px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;}
+      .admin-page-btn.active{background:#1890ff;color:#fff;border-color:#1890ff;}
+      .admin-page-btn[disabled]{opacity:.5;cursor:not-allowed;}`;
+    document.head.appendChild(style);
+  })();
+
+  const api = {
+    users: {
+      list: (q = '', page = 1, size = 10) => '/admin/users/list?page=' + page + '&size=' + size + (q ? ('&username=' + encodeURIComponent(q)) : ''),
+      create: '/admin/users/create',
+      delete: (id) => '/admin/users/delete/'+id
+    },
+    teams: {
+      list: (q='') => '/admin/teams/list?page=1&size=100' + (q ? ('&name='+encodeURIComponent(q)) : ''),
+      create: '/admin/teams/create',
+      delete: (id) => '/admin/teams/delete/'+id,
+      members: (teamId) => '/admin/teams/'+teamId+'/members',
+      addMember: '/admin/teams/members',
+      removeMember: (teamId, userId) => '/admin/teams/'+teamId+'/members/'+userId+'/remove'
+    }
+  };
+
+  function tokenHeader(){
+    const token = localStorage.getItem('adminToken') || '';
+    return {
+      'Content-Type':'application/json',
+      'X-Admin-Token': token
+    };
+  }
+
+  async function loadUsers(){
+    const q = document.getElementById('u-q').value || '';
+    // 初始化或变更搜索时重置页码
+    if(typeof window.usersPageState === 'undefined'){ window.usersPageState = { q:'', current:1, size:10, pages:1, total:0 }; }
+    if(q !== window.usersPageState.q){ window.usersPageState.current = 1; }
+
+    const page = window.usersPageState.current || 1;
+    const size = window.usersPageState.size || 10;
+    const res = await fetch(api.users.list(q, page, size), { headers: tokenHeader() });
+    const data = await res.json();
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = '';
+    const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
+    const list = pageObj.records || [];
+    list.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${u.id || ''}</td><td>${u.username || ''}</td><td>${u.role || ''}</td><td>${u.status || ''}</td>
+        <td>
+          <button class="admin-btn danger" onclick="delUser('${u.id}')">删除</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    // 更新分页状态
+    const total = pageObj.total != null ? pageObj.total : list.length;
+    const pages = pageObj.pages != null ? pageObj.pages : Math.ceil(total / size);
+    window.usersPageState = { q, current: pageObj.current || page, size: pageObj.size || size, pages, total };
+
+    renderUsersPagination();
+  }
+
+  function renderUsersPagination(){
+    const infoEl = document.getElementById('users-page-info');
+    const pagEl = document.getElementById('users-pagination');
+    if(!infoEl || !pagEl || !window.usersPageState) return;
+    const { total, current, pages, size } = window.usersPageState;
+    infoEl.textContent = `共 ${total} 条，当前第 ${current}/${pages} 页，每页 ${size} 条`;
+
+    // 构建分页按钮（含省略）
+    const parts = [];
+    // Prev
+    parts.push(`<button class="admin-page-btn" ${current<=1?'disabled':''} onclick="if(${current}>1){ usersPageState.current=${current}-1; loadUsers(); }">上一页</button>`);
+    // 数字页码
+    const maxButtons = 7;
+    if(pages <= maxButtons){
+      for(let i=1;i<=pages;i++){
+        parts.push(`<button class="admin-page-btn ${i===current?'active':''}" onclick="usersPageState.current=${i}; loadUsers();">${i}</button>`);
+      }
+    }else{
+      // 头尾固定，当前前后各2页
+      parts.push(`<button class="admin-page-btn ${current===1?'active':''}" onclick="usersPageState.current=1; loadUsers();">1</button>`);
+      const start = Math.max(2, current-2);
+      const end = Math.min(pages-1, current+2);
+      if(start > 2){ parts.push(`<span class="admin-muted">...</span>`); }
+      for(let i=start;i<=end;i++){
+        parts.push(`<button class="admin-page-btn ${i===current?'active':''}" onclick="usersPageState.current=${i}; loadUsers();">${i}</button>`);
+      }
+      if(end < pages-1){ parts.push(`<span class="admin-muted">...</span>`); }
+      parts.push(`<button class="admin-page-btn ${current===pages?'active':''}" onclick="usersPageState.current=${pages}; loadUsers();">${pages}</button>`);
+    }
+    // Next
+    parts.push(`<button class="admin-page-btn" ${current>=pages?'disabled':''} onclick="if(${current}<${pages}){ usersPageState.current=${current}+1; loadUsers(); }">下一页</button>`);
+
+    pagEl.innerHTML = parts.join('');
+  }
+
+  async function createUser(){
+    const username = document.getElementById('um-username').value;
+    const password = document.getElementById('um-password').value;
+    const role = document.getElementById('um-role').value;
+    const res = await fetch(api.users.create, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ username, password, role }) });
+    const data = await res.json();
+    alert(data.msg || '创建用户成功');
+    loadUsers();
+    closeUserModal();
+  }
+
+  async function delUser(id){
+    if(!confirm('确认删除该用户？')) return;
+    const res = await fetch(api.users.delete(id), { method:'DELETE', headers: tokenHeader() });
+    const data = await res.json();
+    alert(data.msg || '删除用户成功');
+    loadUsers();
+  }
+
+  async function loadTeams(){
+    const q = document.getElementById('t-q').value || '';
+    const res = await fetch(api.teams.list(q), { headers: tokenHeader() });
+    const data = await res.json();
+    const tbody = document.getElementById('teams-tbody');
+    tbody.innerHTML = '';
+    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    list.forEach(t => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${t.id || ''}</td><td>${t.name || ''}</td><td>${t.ownerId || ''}</td><td>${t.status || ''}</td>
+        <td>
+          <button class="admin-btn" onclick="openMemberModal('${t.id}','${(t.name||'').replace(/\"/g,'&quot;')}')">添加成员</button>
+          <button class="admin-btn secondary" onclick="document.getElementById('tm-teamId').value='${t.id}'; listMembers();">成员</button>
+          <button class="admin-btn danger" onclick="delTeam('${t.id}')">删除</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function createTeam(){
+    const name = document.getElementById('tmod-name').value;
+    const ownerId = document.getElementById('tmod-owner').value;
+    const res = await fetch(api.teams.create, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ name, ownerId }) });
+    const data = await res.json();
+    alert(data.msg || '创建团队成功');
+    loadTeams();
+    closeTeamModal();
+  }
+
+  async function delTeam(id){
+    if(!confirm('确认删除该团队？')) return;
+    const res = await fetch(api.teams.delete(id), { method:'DELETE', headers: tokenHeader() });
+    const data = await res.json();
+    alert(data.msg || '删除团队成功');
+    loadTeams();
+  }
+
+  async function addMember(){
+    const teamId = document.getElementById('tm-teamId').value;
+    const userId = document.getElementById('tm-userId').value;
+    const role = document.getElementById('tm-role').value;
+    const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, role }) });
+    const data = await res.json();
+    alert(data.msg || '添加成员成功');
+    listMembers();
+  }
+
+  // 成员添加弹窗逻辑
+  function openMemberModal(teamId, teamName){
+    document.getElementById('mm-teamId').value = teamId || '';
+    document.getElementById('mm-q').value = '';
+    document.getElementById('mm-role').value = 'MEMBER';
+    const tbody = document.getElementById('mm-users-tbody');
+    if(tbody){ tbody.innerHTML = ''; }
+    document.getElementById('member-modal').style.display = 'flex';
+  }
+  function closeMemberModal(){
+    document.getElementById('member-modal').style.display = 'none';
+  }
+  async function searchMemberCandidates(){
+    const q = document.getElementById('mm-q').value || '';
+    const res = await fetch(api.users.list(q), { headers: tokenHeader() });
+    const data = await res.json();
+    const tbody = document.getElementById('mm-users-tbody');
+    tbody.innerHTML = '';
+    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    list.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${u.id || ''}</td><td>${u.username || ''}</td>
+        <td><button class="admin-btn" onclick="addMemberFromModal('${u.id}')">添加</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  async function addMemberFromModal(userId){
+    const teamId = document.getElementById('mm-teamId').value;
+    const role = document.getElementById('mm-role').value;
+    const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, role }) });
+    const data = await res.json();
+    alert(data.msg || 'OK');
+    closeMemberModal();
+    document.getElementById('tm-teamId').value = teamId; // 同步到成员查看区域
+    listMembers();
+  }
+
+  // 团队 Owner 搜索与选择
+  async function searchOwnerCandidates(){
+    const q = document.getElementById('tmod-owner-q').value || '';
+    const res = await fetch(api.users.list(q), { headers: tokenHeader() });
+    const data = await res.json();
+    const tbody = document.getElementById('tmod-owner-tbody');
+    tbody.innerHTML = '';
+    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    list.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${u.id || ''}</td><td>${u.username || ''}</td>
+        <td><button class="admin-btn" onclick="chooseOwner('${u.id}','${(u.username||'').replace(/\"/g,'&quot;')}')">选择</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  function chooseOwner(id, name){
+    document.getElementById('tmod-owner').value = id || '';
+    document.getElementById('tmod-owner-name').textContent = name || '未选择';
+  }
+
+  async function listMembers(){
+    const teamId = document.getElementById('tm-teamId').value;
+    if(!teamId){ alert('请先输入团队ID'); return; }
+    const res = await fetch(api.teams.members(teamId), { headers: tokenHeader() });
+    const data = await res.json();
+    const tbody = document.getElementById('members-tbody');
+    tbody.innerHTML = '';
+    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    list.forEach(m => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${m.id || ''}</td><td>${m.userId || ''}</td><td>${m.role || ''}</td>
+        <td>
+          <button class="admin-btn danger" onclick="removeMember('${teamId}','${m.userId}')">移除</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function removeMember(teamId, userId){
+    const res = await fetch(api.teams.removeMember(teamId, userId), { method:'POST', headers: tokenHeader() });
+    const data = await res.json();
+    alert(data.msg || 'OK');
+    listMembers();
+  }
+
+  function renderHeaderUser(){
+    const name = localStorage.getItem('adminUsername') || '未登录';
+    const ch = (name && name !== '未登录') ? name.charAt(0).toUpperCase() : 'U';
+    document.getElementById('admin-name').textContent = name;
+    document.getElementById('admin-avatar').textContent = ch;
+  }
+
+  function switchTab(tab){
+    document.querySelectorAll('.admin-menu li').forEach(li => {
+      li.classList.toggle('active', li.getAttribute('data-tab') === tab);
+    });
+    document.querySelectorAll('.admin-card').forEach(card => {
+      card.style.display = (card.getAttribute('data-panel') === tab) ? 'block' : 'none';
+    });
+    // 切换后默认加载列表
+    if(tab === 'users'){ loadUsers(); }
+    if(tab === 'teams'){ loadTeams(); }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    renderHeaderUser();
+    document.querySelectorAll('.admin-menu li').forEach(li => {
+      li.addEventListener('click', function(){
+        switchTab(this.getAttribute('data-tab'));
+      });
+    });
+  });
+
+  // 弹窗控制：用户
+  function openUserModal(){ document.getElementById('user-modal').style.display='flex'; }
+  function closeUserModal(){ document.getElementById('user-modal').style.display='none'; }
+  function submitUserModal(){ createUser(); }
+  // 弹窗控制：团队
+  function openTeamModal(){ document.getElementById('team-modal').style.display='flex'; }
+  function closeTeamModal(){ document.getElementById('team-modal').style.display='none'; }
+  function submitTeamModal(){ createTeam(); }
+  </script>
+</body>
+</html>

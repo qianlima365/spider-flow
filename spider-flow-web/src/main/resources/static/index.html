@@ -8,6 +8,54 @@
 		<link rel="stylesheet" href="css/index.css" />
 		<script>SPIDER_FLOW_VERSION = 'v0.5.0'</script>
 		<script type="text/javascript" src="js/layui/layui.all.js" ></script>
+		<script>
+		// 平台入口页 TOKEN 守卫：本地令牌或 Cookie 登录态
+		(function(){
+		  function readToken(name){
+		    var v = localStorage.getItem(name);
+		    if(!v || v === 'undefined' || v === 'null' || (/^\s*$/.test(v))){ return ''; }
+		    return v;
+		  }
+		  function getPlatformToken(){
+			return readToken('userToken') || readToken('adminToken') || '';
+		  }
+		  function topRedirect(url){
+		    if(window.top){ window.top.location.replace(url); } else { window.location.replace(url); }
+		  }
+
+		  var token = getPlatformToken();
+		  if(!token){
+		    // 无本地令牌时，探测 Cookie 登录态（HttpOnly 无法直接读，走网络校验）
+		    topRedirect('/login.html');
+		  }
+
+		  try{
+		      fetch('/auth/me', { method:'GET', credentials:'include', headers:{ 'Accept':'application/json' } })
+		        .then(function(resp){ if(resp && resp.status === 200){ return resp.json(); } throw new Error('unauth'); })
+		        .then(function(data){ /* Cookie 有效则继续加载首页 */ })
+		        .catch(function(){
+		          try{ localStorage.removeItem('userToken'); localStorage.removeItem('adminToken'); }catch(e){}
+		          topRedirect('/login.html');
+		        });
+		    }catch(e){ topRedirect('/login.html'); }
+
+		  // 如果有 jQuery(Ajax)，统一附加令牌并在 401 时回跳登录
+		  if(window.$ && $.ajaxSetup){
+		    $.ajaxSetup({
+		      beforeSend: function(xhr){
+		        var tk = getPlatformToken();
+		        if(tk){ xhr.setRequestHeader('X-Token', tk); }
+		      },
+		      complete: function(xhr){
+		        if(xhr && xhr.status === 401){
+		          try{ localStorage.removeItem('userToken'); localStorage.removeItem('adminToken'); }catch(e){}
+		          topRedirect('/login.html');
+		        }
+		      }
+		    });
+		  }
+		})();
+		</script>
 		<script type="text/javascript" src="js/index.js" ></script>
 	</head>
 	<body class="layui-layout layui-layout-admin">
@@ -18,13 +66,88 @@
 				<li class="layui-nav-item">
 					<a href="javascript:;" style="padding: 0 20px;">
 						主题
-					</a>
+						</a>
 					<dl class="layui-nav-child">
 						<dd><a data-value="layui-blue">默认</a></dd>
 						<dd><a data-value="layui-black-gray">黑色</a></dd>
 					</dl>
 				</li>
+			<li class="layui-nav-item" id="nav-user" style="margin-left: 10px;">
+                <a href="javascript:;" style="padding: 0 20px; display: flex; align-items: center; gap: 6px;">
+                    <span id="nav-avatar" class="avatar" style="width:24px;height:24px;border-radius:50%;background:#1E9FFF;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;">U</span>
+                    <span id="nav-username">未登录</span>
+                    <i class="layui-icon layui-icon-down" style="font-size:12px;"></i>
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="javascript:;" id="nav-admin">系统管理</a></dd>
+                    <dd><a href="/profile.html" target="_blank">个人中心</a></dd>
+                    <dd><a id="logout-link" href="javascript:;">退出</a></dd>
+                </dl>
+            </li>
 			</ul>
+
+            <script>
+            (function(){
+                // 统一的退出调用：优先使用 jQuery 的 $.ajax，其次 fetch
+                function callLogout(){
+                    return new Promise(function(resolve){
+                        try{
+                            if(window.$ && $.ajax){
+                                $.ajax({
+                                    url: '/auth/logout',
+                                    method: 'POST',
+                                    headers: { 'Accept': 'application/json' },
+                                    xhrFields: { withCredentials: true },
+                                    complete: function(){ resolve(); }
+                                });
+                                return;
+                            }
+                        }catch(e){}
+                        try{
+                            fetch('/auth/logout', { method:'POST', credentials:'include', headers:{ 'Accept':'application/json' } })
+                                .then(function(){ resolve(); })
+                                .catch(function(){ resolve(); });
+                        }catch(e){ resolve(); }
+                    });
+                }
+                function initUserMenu(){
+                    var username = localStorage.getItem('adminUsername') || '未登录';
+                    var token = localStorage.getItem('adminToken') || '';
+                    var nameEl = document.getElementById('nav-username');
+                    var avatarEl = document.getElementById('nav-avatar');
+                    if(nameEl){ nameEl.textContent = username; }
+                    if(avatarEl){
+                        var ch = (username && username !== '未登录') ? username.charAt(0).toUpperCase() : 'U';
+                        avatarEl.textContent = ch;
+                    }
+                    var logout = document.getElementById('logout-link');
+                    if(logout){
+                        logout.addEventListener('click', function(e){
+                            e.preventDefault();
+                            callLogout().finally(function(){
+                                try{
+                                    localStorage.removeItem('adminToken');
+                                    localStorage.removeItem('adminUsername');
+                                    localStorage.removeItem('userToken');
+                                    localStorage.removeItem('username');
+                                }catch(err){}
+                                if(window.top){ window.top.location.replace('/login.html'); } else { window.location.replace('/login.html'); }
+                            });
+                        });
+                    }
+                }
+                document.addEventListener('DOMContentLoaded', function(){
+                    initUserMenu();
+                    var admin = document.getElementById('nav-admin');
+                    if(admin){
+                        admin.addEventListener('click', function(){
+                            // 使用相对路径，兼容反向代理或上下文路径
+                            window.location.href = 'admin.html';
+                        });
+                    }
+                });
+            })();
+            </script>
 		</div>
 		<div class="layui-side">
 			<div class="layui-side-scroll menu-list">

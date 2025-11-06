@@ -13,10 +13,17 @@ function getCookie(name){
 		return null;
 }
 function setTheSkin(value){
-	if(!value){
-		value = "layui-blue";
-	}
-	document.querySelector('#theSkin').setAttribute('href','css/'+value+'.css');
+    // 兜底：避免出现 'undefined'/'null' 造成加载 css/undefined.css
+    if(!value || value === 'undefined' || value === 'null'){
+        value = "layui-blue";
+    }
+    var href = 'css/'+value+'.css';
+    var link = document.querySelector('#theSkin');
+    if(link){
+        link.setAttribute('href', href);
+    }
+    // 标准化破损的 cookie 值，保证返回后样式稳定
+    setCookie('theSkin', value);
 }
 setTheSkin(getCookie('theSkin'));
 function openTab(title,id,href){

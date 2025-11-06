@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>登录</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    /* 作用域仅限登录页容器 */
+    #login-app { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f7fa; font-family: Arial, sans-serif; }
+    .login-card { width: 360px; background: #fff; border: 1px solid #eaeaea; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .login-header { padding: 16px; border-bottom: 1px solid #f0f0f0; font-weight: 600; text-align: center; }
+    .login-body { padding: 16px; display: grid; gap: 12px; }
+    .login-row { display: grid; gap: 6px; }
+    .login-input { padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px; outline: none; }
+    .login-input:focus { border-color: #1890ff; }
+    .login-btn { padding: 10px 12px; border: none; border-radius: 6px; background: #1890ff; color: #fff; cursor: pointer; }
+    .login-status { color: #666; font-size: 12px; min-height: 18px; }
+    .req-star { color: #ff4d4f; margin-left: 4px; }
+  </style>
+  </head>
+<body>
+  <div id="login-app">
+    <div class="login-card">
+      <div class="login-header">登录</div>
+      <div class="login-body">
+        <div class="login-row">
+          <label for="lg-username">用户名 <span class="req-star">*</span></label>
+          <input id="lg-username" class="login-input" placeholder="请输入用户名" required />
+        </div>
+        <div class="login-row">
+          <label for="lg-password">密码 <span class="req-star">*</span></label>
+          <input id="lg-password" class="login-input" type="password" placeholder="请输入密码" required />
+        </div>
+        <div class="login-row" style="display:flex;align-items:center;gap:8px;">
+          <input id="lg-remember" type="checkbox" />
+          <label for="lg-remember" style="user-select:none;cursor:pointer;">记住我</label>
+        </div>
+        <button class="login-btn" onclick="login()">登录</button>
+        <div id="lg-status" class="login-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 顶层跳转，确保不在右侧iframe内刷新
+    function topRedirect(url){ if(window.top){ window.top.location.href = url; } else { window.location.href = url; } }
+
+    // 简单的 Base64 UTF-8 编解码（仅作本地存储的轻度混淆，非安全加密）
+    function toBase64(str){ try { return btoa(unescape(encodeURIComponent(str))); } catch(e){ return ''; } }
+    function fromBase64(b64){ try { return decodeURIComponent(escape(atob(b64 || ''))); } catch(e){ return ''; } }
+
+    // 初始化：记住我的用户名与快捷键
+    (function initLogin(){
+      try{
+        var remembered = localStorage.getItem('rememberLogin') === '1';
+        var rememberedName = localStorage.getItem('rememberUsername') || '';
+        var rememberedPwdEnc = localStorage.getItem('rememberPasswordEnc') || '';
+        var u = document.getElementById('lg-username');
+        var p = document.getElementById('lg-password');
+        var r = document.getElementById('lg-remember');
+        if(r){ r.checked = !!remembered; }
+        if(remembered && rememberedName && u){ u.value = rememberedName; }
+        if(remembered && rememberedPwdEnc && p){ p.value = fromBase64(rememberedPwdEnc); }
+        // Enter 提交；Tab 正常切换到下一个输入
+        function bindShortcut(el){ if(!el) return; el.addEventListener('keydown', function(e){
+          if(e.key === 'Enter'){ e.preventDefault(); login(); }
+        }); }
+        bindShortcut(u); bindShortcut(p);
+      }catch(e){}
+    })();
+
+    async function login(){
+      const username = (document.getElementById('lg-username').value || '').trim();
+      const password = (document.getElementById('lg-password').value || '').trim();
+      const remember = !!document.getElementById('lg-remember').checked;
+      var statusEl = document.getElementById('lg-status');
+      // 前端必填校验
+      if(!username || !password){
+        if(statusEl) statusEl.innerText = '用户名和密码为必填项';
+        return;
+      }
+      // 记住用户名偏好
+      try{
+        localStorage.setItem('rememberLogin', remember ? '1' : '0');
+        if(remember){
+          localStorage.setItem('rememberUsername', username);
+          localStorage.setItem('rememberPasswordEnc', toBase64(password));
+        } else {
+          localStorage.removeItem('rememberUsername');
+          localStorage.removeItem('rememberPasswordEnc');
+        }
+      }catch(e){}
+
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      let data = {};
+      try { data = await res.json(); } catch(e) {}
+      if(res.ok && data && data.code === 0){
+        const adminToken = res.headers.get('X-Admin-Token');
+        const userToken = res.headers.get('X-Token');
+        const name = (data.data && data.data.username) ? data.data.username : username;
+        if(adminToken){
+          // 可选：记住登录在本地（前端），以提升体验
+          if(remember){ localStorage.setItem('adminToken', adminToken); localStorage.setItem('adminUsername', name); }
+          if(statusEl) statusEl.innerText = '登录成功，正在跳转系统管理...';
+          topRedirect('/');
+        }else if(userToken){
+          if(remember){ localStorage.setItem('userToken', userToken); localStorage.setItem('username', name); }
+          if(statusEl) statusEl.innerText = '登录成功，正在跳转首页...';
+          topRedirect('/');
+        }else{
+          // 兼容后端未设置头的情况，回退根据角色或 token 字段
+          const token = data.data && data.data.token;
+          const role = data.data && data.data.role;
+          if(role === 'SUPER_ADMIN' && token){
+            if(remember){ localStorage.setItem('adminToken', token); localStorage.setItem('adminUsername', name); }
+            topRedirect('/');
+          }else if(token){
+            if(remember){ localStorage.setItem('userToken', token); localStorage.setItem('username', name); }
+            topRedirect('/');
+          }else{
+            if(statusEl) statusEl.innerText = '登录成功，但未获取到令牌';
+          }
+        }
+      }else{
+        if(statusEl) statusEl.innerText = (data && data.msg) ? data.msg : '登录失败';
+      }
+    }
+  </script>
+</body>
+</html>

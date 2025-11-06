@@ -138,3 +138,56 @@ CREATE TABLE `sp_redis` (
   `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 用户管理与团队管理表定义（MySQL）
+-- 说明：使用 UUID 作为主键；超级管理员通过部署时插入SQL创建。
+
+
+-- 用户表
+DROP TABLE IF EXISTS `sp_user`;
+CREATE TABLE `sp_user` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(64) NOT NULL,
+  `password` varchar(128) NOT NULL,
+  `role` enum('SUPER_ADMIN','ADMIN','USER') NOT NULL DEFAULT 'USER',
+  `status` enum('ACTIVE','DISABLED') NOT NULL DEFAULT 'ACTIVE',
+  `token` varchar(64) DEFAULT NULL,
+  `create_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `token_expire_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4
+
+-- 团队表
+DROP TABLE IF EXISTS `sp_team`;
+CREATE TABLE IF NOT EXISTS `sp_team` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(128) NOT NULL UNIQUE,
+  `description` VARCHAR(255) DEFAULT NULL,
+  `owner_user_id` INT(11) NOT NULL,
+  `status` ENUM('ACTIVE','DISABLED') NOT NULL DEFAULT 'ACTIVE',
+  `create_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_team_owner` FOREIGN KEY (`owner_user_id`) REFERENCES `sp_user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 团队成员表
+DROP TABLE IF EXISTS `sp_team_member`;
+CREATE TABLE IF NOT EXISTS `sp_team_member` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `team_id` INT(11) NOT NULL,
+  `user_id` INT(11) NOT NULL,
+  `member_role` ENUM('OWNER','MAINTAINER','MEMBER') NOT NULL DEFAULT 'MEMBER',
+  `create_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_team_user` (`team_id`,`user_id`),
+  CONSTRAINT `fk_member_team` FOREIGN KEY (`team_id`) REFERENCES `sp_team`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_member_user` FOREIGN KEY (`user_id`) REFERENCES `sp_user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 超级管理员种子（请在部署时修改用户名与密码）
+-- 默认用户名：admin，密码：admin123，角色：SUPER_ADMIN
+INSERT INTO `sp_user` (`username`,`password`,`role`,`status`,`token`) VALUES
+  ('admin','admin123','SUPER_ADMIN','ACTIVE','ADMIN_INIT_TOKEN')
+ON DUPLICATE KEY UPDATE `username`=VALUES(`username`);
