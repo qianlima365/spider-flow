@@ -224,6 +224,7 @@ $(function(){
 				loadTemplate(cell,editor.getModel(),serializeForm);
 			}
 		});
+		try{ $('.editor-container')[0].focus(); }catch(e){}
 		//绑定工具条点击事件
 		bindToolbarClickAction(editor);
 		//加载图形
