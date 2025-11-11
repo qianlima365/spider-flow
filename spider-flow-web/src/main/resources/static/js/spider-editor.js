@@ -252,6 +252,51 @@ function SpiderEditor(options){
 			mxEvent.addListener(container, 'mouseleave', function(){
 				container.classList.remove('panning-active');
 			});
+			// 画布点击触发自动保存（节流：每分钟一次）
+			var lastAutoSaveAt = 0;
+			var autoSaveInterval = 10 * 1000;
+			function triggerAutoSave(reason){
+				var now = Date.now();
+				if (now - lastAutoSaveAt < autoSaveInterval){
+					return;
+				}
+				lastAutoSaveAt = now;
+				if (typeof window.AutoSave === 'function'){
+					window.AutoSave();
+				}else if (typeof window.Save === 'function'){
+					window.Save();
+				}
+			}
+			mxEvent.addListener(container,'click',function(){
+				triggerAutoSave('click');
+			});
+			// 使用图形库的点击事件，覆盖对节点和边的点击
+			_this.graph.addListener(mxEvent.CLICK, function(sender, evt){
+				triggerAutoSave('graph-click');
+			});
+			// 每分钟自动保存一次
+			setInterval(function(){ triggerAutoSave('interval'); }, autoSaveInterval);
+			// 监听自动保存成功事件，在画布右上角提示
+			document.addEventListener('spider:autoSaveSuccess', function(){
+				try{
+					var toast = document.createElement('div');
+					toast.textContent = '自动保存成功';
+					toast.style.position = 'absolute';
+					toast.style.top = '8px';
+					toast.style.right = '8px';
+					toast.style.background = 'rgba(0,0,0,0.7)';
+					toast.style.color = '#fff';
+					toast.style.fontSize = '12px';
+					toast.style.padding = '6px 10px';
+					toast.style.borderRadius = '3px';
+					toast.style.zIndex = 9999;
+					toast.style.pointerEvents = 'none';
+					container.appendChild(toast);
+					setTimeout(function(){
+						if (toast && toast.parentNode){ toast.parentNode.removeChild(toast); }
+					}, 1200);
+				}catch(e){}
+			});
 		}
 	}
 }

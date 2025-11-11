@@ -1199,3 +1199,30 @@ function drop(ev){
 	ev.preventDefault();
 	serializeForm();
 }
+
+// 自动保存：与 Save 相同逻辑，但提示为“自动保存成功”，并触发事件用于画布右上角提示
+function AutoSave(){
+    validXML(function(){
+        $.ajax({
+            url : 'spider/save',
+            type : 'post',
+            data : {
+                id : getQueryString('id') || flowId,
+                xml : editor.getXML(),
+                name : editor.graph.getModel().getRoot().data.get('spiderName') || '未定义名称',
+            },
+            success : function(id) {
+                flowId = id;
+                // 顶部右侧提示（通过事件交给画布容器处理具体位置展示）
+                try{
+                    var evt = new CustomEvent('spider:autoSaveSuccess');
+                    document.dispatchEvent(evt);
+                }catch(e){}
+                // 额外采用 layer 在右上角提示，作为兜底
+                if (window.layui && window.layui.layer && window.layui.layer.msg){
+                    window.layui.layer.msg('自动保存成功', { time: 800, offset: 'rt' });
+                }
+            }
+        })
+    });
+}
