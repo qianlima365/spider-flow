@@ -30,15 +30,34 @@
     .admin-table { border-collapse: collapse; width: 100%; }
     .admin-table th, .admin-table td { border: 1px solid #eee; padding: 8px; }
     .admin-table th { background: #fafafa; }
+    /* 仅用户列表居中显示 */
+    #admin-app [data-panel="users"] .admin-table th,
+    #admin-app [data-panel="users"] .admin-table td { text-align: center; }
+    /* 团队面板内所有表格内容居中显示 */
+    .admin-card[data-panel="teams"] .admin-table th,
+    .admin-card[data-panel="teams"] .admin-table td { text-align: center; }
+    /* 团队拥有者与成员选择列表居中显示 */
+    #team-modal .admin-table th,
+    #team-modal .admin-table td,
+    #member-modal .admin-table th,
+    #member-modal .admin-table td { text-align: center; }
+    /* 成员查看弹窗列表居中显示 */
+    #members-modal .admin-table th,
+    #members-modal .admin-table td { text-align: center; }
     .admin-muted { color: #666; font-size: 12px; }
     /* 简易弹窗样式（仅作用于 admin 页） */
     .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 1000; }
     .admin-modal .admin-modal-content { width: 520px; max-width: 90vw; background: #fff; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.2); overflow: hidden; }
+    /* 成员弹窗加宽以便操作按钮并排 */
+    #members-modal .admin-modal-content { width: 720px; }
     .admin-modal-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-weight: 600; }
     .admin-modal-body { padding: 12px 16px; }
     .admin-modal-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; justify-content: flex-end; }
     .admin-form-row { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
     .admin-form-row label { width: 92px; color: #555; }
+    .required-star { color: #ff4d4f; margin-left: 4px; }
+    /* 操作按钮并排容器 */
+    .admin-actions-inline { display: flex; gap: 8px; align-items: center; justify-content: center; }
   </style>
 </head>
 <body>
@@ -61,17 +80,16 @@
       <div class="admin-card" data-panel="users" style="display:none;">
         <div class="admin-card-header">用户管理</div>
         <div class="admin-card-body">
-          <div class="admin-row" style="justify-content: space-between;">
-            <div class="admin-row" style="flex:1;">
-              <input class="admin-input" id="u-q" placeholder="搜索用户名" style="flex:1;"/>
+          <div class="admin-row" style="justify-content: flex-start;">
+            <div class="admin-row">
+              <input type="search" class="admin-input" id="u-q" placeholder="搜索用户名" style="width: 240px;"/>
               <button class="admin-btn secondary" onclick="loadUsers()">搜索</button>
-            </div>
-            <div>
+              <button class="admin-btn" onclick="clearUserSearch()">清空</button>
               <button class="admin-btn" onclick="openUserModal()">添加用户</button>
             </div>
           </div>
           <table class="admin-table">
-            <thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+            <thead><tr><th>用户名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
             <tbody id="users-tbody"></tbody>
           </table>
           <div class="admin-row" style="justify-content: space-between; align-items: center; margin-top: 8px;">
@@ -85,34 +103,20 @@
         <div class="admin-card-header">团队管理</div>
         <div class="admin-card-body">
           <div class="admin-row" style="justify-content: space-between;">
-            <div class="admin-row" style="flex:1;">
-              <input class="admin-input" id="t-q" placeholder="搜索团队名称" style="flex:1;"/>
+            <div class="admin-row" style="flex:1; justify-content:flex-start;">
+              <input class="admin-input" id="t-q" placeholder="搜索团队名称" style="width:240px;"/>
               <button class="admin-btn secondary" onclick="loadTeams()">搜索</button>
-            </div>
-            <div>
-              <button class="admin-btn" onclick="openTeamModal()">添加团队</button>
+              <button class="admin-btn" onclick="openTeamModal()">创建团队</button>
             </div>
           </div>
-          <table class="admin-table">
-            <thead><tr><th>ID</th><th>名称</th><th>Owner</th><th>状态</th><th>操作</th></tr></thead>
+          <table class="admin-table" id="teams-table">
+            <thead><tr><th>名称</th><th>拥有者</th><th>状态</th><th>操作</th></tr></thead>
             <tbody id="teams-tbody"></tbody>
           </table>
-
-          <div style="margin-top:12px;font-weight:600;">团队成员</div>
-          <div class="admin-row">
-            <input class="admin-input" id="tm-teamId" placeholder="团队ID" />
-            <input class="admin-input" id="tm-userId" placeholder="用户ID" />
-            <select class="admin-select" id="tm-role">
-              <option value="MEMBER">MEMBER</option>
-              <option value="MAINTAINER">MAINTAINER</option>
-            </select>
-            <button class="admin-btn" onclick="addMember()">添加成员</button>
-            <button class="admin-btn secondary" onclick="listMembers()">查看成员</button>
+          <div class="admin-row" style="justify-content: space-between; align-items: center; margin-top: 8px;">
+            <div class="admin-muted" id="teams-page-info"></div>
+            <div class="admin-pagination" id="teams-pagination"></div>
           </div>
-          <table class="admin-table">
-            <thead><tr><th>成员ID</th><th>用户ID</th><th>角色</th><th>操作</th></tr></thead>
-            <tbody id="members-tbody"></tbody>
-          </table>
         </div>
       </div>
     </main>
@@ -147,33 +151,85 @@
     </div>
   </div>
 
+  <!-- 用户编辑弹窗 -->
+  <div class="admin-modal" id="edit-user-modal">
+    <div class="admin-modal-content">
+      <div class="admin-modal-header">编辑用户信息</div>
+      <div class="admin-modal-body">
+        <input type="hidden" id="eu-id" />
+        <div class="admin-form-row">
+          <label for="eu-username">用户名</label>
+          <input class="admin-input" id="eu-username" placeholder="请输入新的用户名" />
+        </div>
+        <div class="admin-form-row">
+          <label for="eu-role">角色</label>
+          <select class="admin-select" id="eu-role">
+            <option value="USER">USER</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="admin-btn secondary" onclick="submitEditUserModal()">保存</button>
+        <button class="admin-btn danger" onclick="closeEditUserModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 团队创建弹窗 -->
   <div class="admin-modal" id="team-modal">
     <div class="admin-modal-content">
-      <div class="admin-modal-header">添加团队</div>
+      <div class="admin-modal-header">创建团队</div>
       <div class="admin-modal-body">
         <div class="admin-form-row">
-          <label for="tmod-name">团队名称</label>
-          <input class="admin-input" id="tmod-name" placeholder="请输入团队名称" />
+          <label for="tmod-name">团队名称<span class="required-star">*</span></label>
+          <input class="admin-input" id="tmod-name" placeholder="请输入团队名称" style="flex:1;" />
         </div>
+        <!-- 仅支持通过列表选择 Owner，隐藏存储所选 Owner 用户ID -->
+        <input type="hidden" id="tmod-owner" />
         <div class="admin-form-row">
-          <label for="tmod-owner">Owner用户ID</label>
-          <input class="admin-input" id="tmod-owner" placeholder="请输入Owner用户ID" />
-        </div>
-        <div class="admin-form-row">
-          <label for="tmod-owner-q">Owner选择</label>
-          <input class="admin-input" id="tmod-owner-q" placeholder="搜索用户名以选择 Owner" style="flex:1;" />
+          <label for="tmod-owner-q">拥有者<span class="required-star">*</span></label>
+          <input class="admin-input" id="tmod-owner-q" placeholder="搜索用户名以选择团队拥有者" style="flex:1;" />
           <button class="admin-btn secondary" onclick="searchOwnerCandidates()">搜索</button>
         </div>
-        <div class="admin-muted">已选择 Owner：<span id="tmod-owner-name">未选择</span></div>
+        <div class="admin-muted">已选择团队拥有者：<span id="tmod-owner-name">未选择</span></div>
         <table class="admin-table" style="margin-top:8px;">
-          <thead><tr><th>ID</th><th>用户名</th><th>操作</th></tr></thead>
+          <thead><tr><th>用户名</th><th>操作</th></tr></thead>
           <tbody id="tmod-owner-tbody"></tbody>
         </table>
+        <div class="admin-row" style="justify-content: space-between; align-items: center; margin-top: 8px;">
+          <div class="admin-muted" id="owner-page-info"></div>
+          <div class="admin-pagination" id="owner-pagination"></div>
+        </div>
       </div>
       <div class="admin-modal-footer">
         <button class="admin-btn secondary" onclick="submitTeamModal()">保存</button>
         <button class="admin-btn danger" onclick="closeTeamModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 团队编辑弹窗 -->
+  <div class="admin-modal" id="edit-team-modal">
+    <div class="admin-modal-content">
+      <div class="admin-modal-header">编辑团队信息</div>
+      <div class="admin-modal-body">
+        <input type="hidden" id="et-id" />
+        <div class="admin-form-row">
+          <label for="et-name">团队名称</label>
+          <input class="admin-input" id="et-name" placeholder="请输入新的团队名称" />
+        </div>
+        <div class="admin-form-row">
+          <label for="et-status">状态</label>
+          <select class="admin-select" id="et-status">
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="DISABLED">DISABLED</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="admin-btn secondary" onclick="submitEditTeamModal()">保存</button>
+        <button class="admin-btn danger" onclick="closeEditTeamModal()">取消</button>
       </div>
     </div>
   </div>
@@ -184,6 +240,7 @@
       <div class="admin-modal-header">添加团队成员</div>
       <div class="admin-modal-body">
         <input type="hidden" id="mm-teamId" />
+        <input type="hidden" id="mm-user-id" />
         <div class="admin-form-row">
           <label for="mm-role">成员角色</label>
           <select class="admin-select" id="mm-role">
@@ -196,13 +253,43 @@
           <input class="admin-input" id="mm-q" placeholder="按用户名搜索" style="flex:1;" />
           <button class="admin-btn secondary" onclick="searchMemberCandidates()">搜索</button>
         </div>
+        <div class="admin-row" style="display:flex; justify-content: space-between; align-items:center;">
+          <div class="admin-muted">已选择成员：<span id="mm-user-name">未选择</span></div>
+          <div><button class="admin-btn" onclick="clearMemberSelection()">清空选择</button></div>
+        </div>
         <table class="admin-table" style="margin-top:8px;">
-          <thead><tr><th>ID</th><th>用户名</th><th>操作</th></tr></thead>
+          <thead><tr><th>选择</th><th>用户名</th></tr></thead>
           <tbody id="mm-users-tbody"></tbody>
         </table>
+        <div class="admin-row" style="justify-content: space-between; align-items: center; margin-top: 8px;">
+          <div class="admin-muted" id="member-page-info"></div>
+          <div class="admin-pagination" id="member-pagination"></div>
+        </div>
       </div>
       <div class="admin-modal-footer">
+        <button class="admin-btn secondary" onclick="submitMemberModal()">保存</button>
         <button class="admin-btn danger" onclick="closeMemberModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成员查看弹窗 -->
+  <div class="admin-modal" id="members-modal">
+    <div class="admin-modal-content">
+      <div class="admin-modal-header">团队成员</div>
+      <div class="admin-modal-body">
+        <input type="hidden" id="mmv-teamId" />
+        <table class="admin-table">
+          <thead><tr><th>用户名</th><th>角色</th><th>操作</th></tr></thead>
+          <tbody id="members-modal-tbody"></tbody>
+        </table>
+        <div class="admin-row" style="justify-content: space-between; align-items: center; margin-top: 8px;">
+          <div class="admin-muted" id="members-modal-page-info"></div>
+          <div class="admin-pagination" id="members-modal-pagination"></div>
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="admin-btn danger" onclick="closeMembersModal()">关闭</button>
       </div>
     </div>
   </div>
@@ -223,15 +310,19 @@
     users: {
       list: (q = '', page = 1, size = 10) => '/admin/users/list?page=' + page + '&size=' + size + (q ? ('&username=' + encodeURIComponent(q)) : ''),
       create: '/admin/users/create',
-      delete: (id) => '/admin/users/delete/'+id
+      update: '/admin/users/update',
+      delete: (id) => '/admin/users/delete/' + encodeURIComponent(id),
+      get: (id) => '/admin/users/get/' + encodeURIComponent(id)
     },
     teams: {
-      list: (q='') => '/admin/teams/list?page=1&size=100' + (q ? ('&name='+encodeURIComponent(q)) : ''),
+      list: (q='', page=1, size=10) => '/admin/teams/list?page=' + page + '&limit=' + size + (q ? ('&name='+encodeURIComponent(q)) : ''),
       create: '/admin/teams/create',
-      delete: (id) => '/admin/teams/delete/'+id,
-      members: (teamId) => '/admin/teams/'+teamId+'/members',
-      addMember: '/admin/teams/members',
-      removeMember: (teamId, userId) => '/admin/teams/'+teamId+'/members/'+userId+'/remove'
+      update: '/admin/teams/update',
+      delete: (id) => '/admin/teams/delete/' + encodeURIComponent(id),
+      members: (teamId, page=1, size=10) => '/admin/teams/members?teamId=' + encodeURIComponent(teamId) + '&page=' + page + '&limit=' + size,
+      addMember: '/admin/teams/members/add',
+      removeMember: (teamId, userId) => '/admin/teams/members/remove?teamId=' + encodeURIComponent(teamId) + '&userId=' + encodeURIComponent(userId),
+      updateMember: '/admin/teams/members/update'
     }
   };
 
@@ -259,8 +350,9 @@
     const list = pageObj.records || [];
     list.forEach(u => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${u.id || ''}</td><td>${u.username || ''}</td><td>${u.role || ''}</td><td>${u.status || ''}</td>
+      tr.innerHTML = `<td>${u.username || ''}</td><td>${u.role || ''}</td><td>${u.status || ''}</td>
         <td>
+          <button class="admin-btn" onclick="openEditUserModal('${u.id}','${(u.username||'').replace(/\"/g,'&quot;')}','${u.role||''}')">编辑</button>
           <button class="admin-btn danger" onclick="delUser('${u.id}')">删除</button>
         </td>`;
       tbody.appendChild(tr);
@@ -272,6 +364,13 @@
     window.usersPageState = { q, current: pageObj.current || page, size: pageObj.size || size, pages, total };
 
     renderUsersPagination();
+  }
+
+  function clearUserSearch(){
+    const input = document.getElementById('u-q');
+    if(input){ input.value = ''; }
+    if(window.usersPageState){ window.usersPageState.current = 1; }
+    loadUsers();
   }
 
   function renderUsersPagination(){
@@ -328,29 +427,114 @@
     loadUsers();
   }
 
+  // 编辑用户弹窗逻辑
+  function openEditUserModal(id, username, role){
+    document.getElementById('eu-id').value = id || '';
+    document.getElementById('eu-username').value = username || '';
+    document.getElementById('eu-role').value = role || 'USER';
+    document.getElementById('edit-user-modal').style.display = 'flex';
+  }
+  function closeEditUserModal(){
+    document.getElementById('edit-user-modal').style.display = 'none';
+  }
+  async function submitEditUserModal(){
+    const id = document.getElementById('eu-id').value;
+    const username = document.getElementById('eu-username').value;
+    const role = document.getElementById('eu-role').value;
+    const res = await fetch(api.users.update, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ id, username, role }) });
+    let data = {};
+    try{ data = await res.json(); }catch(e){}
+    alert((data && data.msg) ? data.msg : '保存成功');
+    closeEditUserModal();
+    loadUsers();
+  }
+
   async function loadTeams(){
     const q = document.getElementById('t-q').value || '';
-    const res = await fetch(api.teams.list(q), { headers: tokenHeader() });
+    if(typeof window.teamsPageState === 'undefined'){ window.teamsPageState = { q:'', current:1, size:10, pages:1, total:0 }; }
+    if(q !== window.teamsPageState.q){ window.teamsPageState.current = 1; }
+
+    const page = window.teamsPageState.current || 1;
+    const size = window.teamsPageState.size || 10;
+    const res = await fetch(api.teams.list(q, page, size), { headers: tokenHeader() });
     const data = await res.json();
     const tbody = document.getElementById('teams-tbody');
     tbody.innerHTML = '';
-    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
+    const list = pageObj.records || [];
+
+    // 预取拥有者用户名
+    if(typeof window.ownerNameCache === 'undefined'){ window.ownerNameCache = {}; }
+    const ownerIds = Array.from(new Set(list.map(t => t.ownerUserId).filter(id => !!id)));
+    const toFetch = ownerIds.filter(id => !(id in window.ownerNameCache));
+    if(toFetch.length > 0){
+      try{
+        await Promise.all(toFetch.map(async (id) => {
+          const r = await fetch(api.users.get(id), { headers: tokenHeader() });
+          let jd = {};
+          try{ jd = await r.json(); }catch(e){}
+          const u = (jd && jd.data) ? jd.data : jd;
+          window.ownerNameCache[id] = (u && u.username) ? u.username : '';
+        }));
+      }catch(e){ /* 忽略单个查询错误 */ }
+    }
+
+    // 渲染列表，显示拥有者用户名
     list.forEach(t => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${t.id || ''}</td><td>${t.name || ''}</td><td>${t.ownerId || ''}</td><td>${t.status || ''}</td>
+      const ownerName = (t.ownerUserId && window.ownerNameCache[t.ownerUserId]) ? window.ownerNameCache[t.ownerUserId] : '';
+      tr.innerHTML = `<td>${t.name || ''}</td><td>${ownerName || '-'}</td><td>${t.status || ''}</td>
         <td>
           <button class="admin-btn" onclick="openMemberModal('${t.id}','${(t.name||'').replace(/\"/g,'&quot;')}')">添加成员</button>
-          <button class="admin-btn secondary" onclick="document.getElementById('tm-teamId').value='${t.id}'; listMembers();">成员</button>
+          <button class="admin-btn secondary" onclick="openMembersModal('${t.id}')">成员</button>
+          <button class="admin-btn" onclick="openEditTeamModal('${t.id}','${(t.name||'').replace(/\"/g,'&quot;')}','${t.status||''}')">编辑</button>
           <button class="admin-btn danger" onclick="delTeam('${t.id}')">删除</button>
         </td>`;
       tbody.appendChild(tr);
     });
+
+    const total = pageObj.total != null ? pageObj.total : list.length;
+    const pages = pageObj.pages != null ? pageObj.pages : Math.ceil(total / size);
+    window.teamsPageState = { q, current: pageObj.current || page, size: pageObj.size || size, pages, total };
+
+    renderTeamsPagination();
+  }
+
+  function renderTeamsPagination(){
+    const infoEl = document.getElementById('teams-page-info');
+    const pagEl = document.getElementById('teams-pagination');
+    if(!infoEl || !pagEl || !window.teamsPageState) return;
+    const { total, current, pages, size } = window.teamsPageState;
+    infoEl.textContent = `共 ${total} 条，当前第 ${current}/${pages} 页，每页 ${size} 条`;
+
+    const parts = [];
+    parts.push(`<button class="admin-page-btn" ${current<=1?'disabled':''} onclick="if(${current}>1){ teamsPageState.current=${current}-1; loadTeams(); }">上一页</button>`);
+    const maxButtons = 7;
+    if(pages <= maxButtons){
+      for(let i=1;i<=pages;i++){
+        parts.push(`<button class="admin-page-btn ${i===current?'active':''}" onclick="teamsPageState.current=${i}; loadTeams();">${i}</button>`);
+      }
+    }else{
+      parts.push(`<button class="admin-page-btn ${current===1?'active':''}" onclick="teamsPageState.current=1; loadTeams();">1</button>`);
+      const start = Math.max(2, current-2);
+      const end = Math.min(pages-1, current+2);
+      if(start > 2){ parts.push(`<span class="admin-muted">...</span>`); }
+      for(let i=start;i<=end;i++){
+        parts.push(`<button class="admin-page-btn ${i===current?'active':''}" onclick="teamsPageState.current=${i}; loadTeams();">${i}</button>`);
+      }
+      if(end < pages-1){ parts.push(`<span class="admin-muted">...</span>`); }
+      parts.push(`<button class="admin-page-btn ${current===pages?'active':''}" onclick="teamsPageState.current=${pages}; loadTeams();">${pages}</button>`);
+    }
+    parts.push(`<button class="admin-page-btn" ${current>=pages?'disabled':''} onclick="if(${current}<${pages}){ teamsPageState.current=${current}+1; loadTeams(); }">下一页</button>`);
+    pagEl.innerHTML = parts.join('');
   }
 
   async function createTeam(){
-    const name = document.getElementById('tmod-name').value;
-    const ownerId = document.getElementById('tmod-owner').value;
-    const res = await fetch(api.teams.create, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ name, ownerId }) });
+    const name = (document.getElementById('tmod-name').value || '').trim();
+    const ownerUserId = document.getElementById('tmod-owner').value;
+    if(!name){ alert('团队名称为必填'); return; }
+    if(!ownerUserId){ alert('请选择团队拥有者（从用户列表中选择）'); return; }
+    const res = await fetch(api.teams.create, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ name, ownerUserId }) });
     const data = await res.json();
     alert(data.msg || '创建团队成功');
     loadTeams();
@@ -359,7 +543,7 @@
 
   async function delTeam(id){
     if(!confirm('确认删除该团队？')) return;
-    const res = await fetch(api.teams.delete(id), { method:'DELETE', headers: tokenHeader() });
+    const res = await fetch(api.teams.delete(id), { method:'POST', headers: tokenHeader() });
     const data = await res.json();
     alert(data.msg || '删除团队成功');
     loadTeams();
@@ -368,8 +552,8 @@
   async function addMember(){
     const teamId = document.getElementById('tm-teamId').value;
     const userId = document.getElementById('tm-userId').value;
-    const role = document.getElementById('tm-role').value;
-    const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, role }) });
+    const memberRole = document.getElementById('tm-role').value;
+    const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, memberRole }) });
     const data = await res.json();
     alert(data.msg || '添加成员成功');
     listMembers();
@@ -380,52 +564,213 @@
     document.getElementById('mm-teamId').value = teamId || '';
     document.getElementById('mm-q').value = '';
     document.getElementById('mm-role').value = 'MEMBER';
+    document.getElementById('mm-user-id').value = '';
+    // 初始化多选选择状态
+    window.memberSelected = {};
+    const chosenNameEl = document.getElementById('mm-user-name');
+    if(chosenNameEl){ chosenNameEl.textContent = '未选择'; }
     const tbody = document.getElementById('mm-users-tbody');
     if(tbody){ tbody.innerHTML = ''; }
+    // 重置成员搜索分页状态
+    window.memberSearchPageState = { q:'', current:1, size:10, pages:1, total:0 };
+    const infoEl = document.getElementById('member-page-info');
+    const pagEl = document.getElementById('member-pagination');
+    if(infoEl) infoEl.textContent = '';
+    if(pagEl) pagEl.innerHTML = '';
+    // 预取当前团队成员，便于在候选列表中禁选已存在成员
+    try{ prefetchTeamMembers(teamId); }catch(e){ /* 忽略预取错误 */ }
     document.getElementById('member-modal').style.display = 'flex';
   }
   function closeMemberModal(){
     document.getElementById('member-modal').style.display = 'none';
   }
+  // 预取当前团队成员ID集合，用于禁用已在成员列表中的候选复选框
+  async function prefetchTeamMembers(teamId){
+    if(!teamId){ window.currentTeamMembersSet = new Set(); return; }
+    window.currentTeamMembersSet = new Set();
+    try{
+      let page = 1;
+      const size = 50;
+      while(true){
+        const res = await fetch(api.teams.members(teamId, page, size), { headers: tokenHeader() });
+        const jd = await res.json();
+        const pageObj = (jd && jd.data && (jd.data.records || jd.data.total !== undefined)) ? jd.data : jd;
+        const list = pageObj.records || [];
+        list.forEach(m => {
+          const uid = String(m.userId != null ? m.userId : ((m.user && m.user.id != null) ? m.user.id : m.id));
+          if(uid){ window.currentTeamMembersSet.add(uid); }
+        });
+        const pages = pageObj.pages != null ? pageObj.pages : Math.ceil((pageObj.total || list.length) / (pageObj.size || size));
+        if(page >= pages || list.length === 0){ break; }
+        page++;
+      }
+    }catch(e){ /* 预取失败不阻塞选择逻辑 */ }
+  }
   async function searchMemberCandidates(){
+    const teamId = document.getElementById('mm-teamId').value || '';
+    // 若尚未预取成员集合，则先加载，确保禁选逻辑生效
+    if(!window.currentTeamMembersSet || !(window.currentTeamMembersSet instanceof Set)){
+      try{ await prefetchTeamMembers(teamId); }catch(e){ window.currentTeamMembersSet = new Set(); }
+    }
     const q = document.getElementById('mm-q').value || '';
-    const res = await fetch(api.users.list(q), { headers: tokenHeader() });
+    if(typeof window.memberSearchPageState === 'undefined'){ window.memberSearchPageState = { q:'', current:1, size:10, pages:1, total:0 }; }
+    if(q !== window.memberSearchPageState.q){ window.memberSearchPageState.current = 1; }
+
+    const page = window.memberSearchPageState.current || 1;
+    const size = window.memberSearchPageState.size || 10;
+    const res = await fetch(api.users.list(q, page, size), { headers: tokenHeader() });
     const data = await res.json();
     const tbody = document.getElementById('mm-users-tbody');
     tbody.innerHTML = '';
-    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
+    const list = pageObj.records || [];
     list.forEach(u => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${u.id || ''}</td><td>${u.username || ''}</td>
-        <td><button class="admin-btn" onclick="addMemberFromModal('${u.id}')">添加</button></td>`;
+      const uname = (u.username||'').replace(/\"/g,'&quot;');
+      const checked = (window.memberSelected && window.memberSelected[String(u.id)]) ? 'checked' : '';
+      const disabled = (window.currentTeamMembersSet && window.currentTeamMembersSet.has(String(u.id))) ? 'disabled' : '';
+      const title = disabled ? 'title="已是团队成员"' : '';
+      tr.innerHTML = `<td><input type="checkbox" ${checked} ${disabled} ${title} onchange="toggleMember('${u.id}','${uname}', this.checked)" /></td>
+        <td>${uname}</td>`;
       tbody.appendChild(tr);
     });
+
+    const total = pageObj.total != null ? pageObj.total : list.length;
+    const pages = pageObj.pages != null ? pageObj.pages : Math.ceil(total / size);
+    window.memberSearchPageState = { q, current: pageObj.current || page, size: pageObj.size || size, pages, total };
+    renderMemberPagination();
   }
-  async function addMemberFromModal(userId){
+
+  function renderMemberPagination(){
+    const infoEl = document.getElementById('member-page-info');
+    const pagEl = document.getElementById('member-pagination');
+    if(!infoEl || !pagEl || !window.memberSearchPageState) return;
+    const { total, current, pages, size } = window.memberSearchPageState;
+    infoEl.textContent = `共 ${total} 条，当前第 ${current}/${pages} 页，每页 ${size} 条`;
+
+    const parts = [];
+    parts.push(`<button class=\"admin-page-btn\" ${current<=1?'disabled':''} onclick=\"if(${current}>1){ memberSearchPageState.current=${current}-1; searchMemberCandidates(); }\">上一页</button>`);
+    const maxButtons = 7;
+    if(pages <= maxButtons){
+      for(let i=1;i<=pages;i++){
+        parts.push(`<button class=\"admin-page-btn ${i===current?'active':''}\" onclick=\"memberSearchPageState.current=${i}; searchMemberCandidates();\">${i}</button>`);
+      }
+    }else{
+      parts.push(`<button class=\"admin-page-btn ${current===1?'active':''}\" onclick=\"memberSearchPageState.current=1; searchMemberCandidates();\">1</button>`);
+      if(current > 3) parts.push('<span class=\"admin-muted\">...</span>');
+      const start = Math.max(2, current-1);
+      const end = Math.min(pages-1, current+1);
+      for(let i=start;i<=end;i++){
+        parts.push(`<button class=\"admin-page-btn ${i===current?'active':''}\" onclick=\"memberSearchPageState.current=${i}; searchMemberCandidates();\">${i}</button>`);
+      }
+      if(current < pages-2) parts.push('<span class=\"admin-muted\">...</span>');
+      parts.push(`<button class=\"admin-page-btn ${current===pages?'active':''}\" onclick=\"memberSearchPageState.current=${pages}; searchMemberCandidates();\">${pages}</button>`);
+    }
+    parts.push(`<button class=\"admin-page-btn\" ${current>=pages?'disabled':''} onclick=\"if(${current}<${pages}){ memberSearchPageState.current=${current}+1; searchMemberCandidates(); }\">下一页</button>`);
+    pagEl.innerHTML = parts.join('');
+  }
+
+  function toggleMember(id, name, checked){
+    if(typeof window.memberSelected === 'undefined'){ window.memberSelected = {}; }
+    const key = String(id);
+    if(checked){ window.memberSelected[key] = name || ''; }
+    else{ delete window.memberSelected[key]; }
+    updateMemberSelectionSummary();
+  }
+
+  function updateMemberSelectionSummary(){
+    const el = document.getElementById('mm-user-name');
+    if(!el) return;
+    const ids = Object.keys(window.memberSelected || {});
+    if(ids.length === 0){ el.textContent = '未选择'; return; }
+    const names = ids.map(id => window.memberSelected[id]).filter(Boolean);
+    el.textContent = names.length ? names.join('，') : ids.join(',');
+  }
+
+  function clearMemberSelection(){
+    window.memberSelected = {};
+    updateMemberSelectionSummary();
+    document.querySelectorAll('#mm-users-tbody input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+  }
+
+  async function submitMemberModal(){
     const teamId = document.getElementById('mm-teamId').value;
     const role = document.getElementById('mm-role').value;
-    const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, role }) });
-    const data = await res.json();
-    alert(data.msg || 'OK');
+    if(!teamId){ alert('缺少团队ID'); return; }
+    const selected = Object.keys(window.memberSelected || {});
+    if(selected.length === 0){ alert('请先选择成员用户'); return; }
+    let success = 0, fail = 0;
+    for(const uid of selected){
+      try{
+        const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId: uid, memberRole: role }) });
+        const jd = await res.json();
+        if(jd && (jd.code === 0 || jd.success === true || jd.msg === 'OK' || jd.data)) success++; else fail++;
+      }catch(e){ fail++; }
+    }
+    alert(`添加成员完成：成功 ${success} 个，失败 ${fail} 个`);
     closeMemberModal();
-    document.getElementById('tm-teamId').value = teamId; // 同步到成员查看区域
+    // 同步到成员查看区域并刷新列表
+    const tmInput = document.getElementById('tm-teamId');
+    if(tmInput){ tmInput.value = teamId; }
     listMembers();
   }
 
   // 团队 Owner 搜索与选择
   async function searchOwnerCandidates(){
     const q = document.getElementById('tmod-owner-q').value || '';
-    const res = await fetch(api.users.list(q), { headers: tokenHeader() });
+    // 分页状态初始化与变更处理
+    if(typeof window.ownerSearchPageState === 'undefined'){ window.ownerSearchPageState = { q:'', current:1, size:10, pages:1, total:0 }; }
+    if(q !== window.ownerSearchPageState.q){ window.ownerSearchPageState.current = 1; }
+
+    const page = window.ownerSearchPageState.current || 1;
+    const size = window.ownerSearchPageState.size || 10;
+    const res = await fetch(api.users.list(q, page, size), { headers: tokenHeader() });
     const data = await res.json();
     const tbody = document.getElementById('tmod-owner-tbody');
     tbody.innerHTML = '';
-    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
+    const list = pageObj.records || [];
     list.forEach(u => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${u.id || ''}</td><td>${u.username || ''}</td>
+      tr.innerHTML = `<td>${u.username || ''}</td>
         <td><button class="admin-btn" onclick="chooseOwner('${u.id}','${(u.username||'').replace(/\"/g,'&quot;')}')">选择</button></td>`;
       tbody.appendChild(tr);
     });
+
+    const total = pageObj.total != null ? pageObj.total : list.length;
+    const pages = pageObj.pages != null ? pageObj.pages : Math.ceil(total / size);
+    window.ownerSearchPageState = { q, current: pageObj.current || page, size: pageObj.size || size, pages, total };
+
+    renderOwnerPagination();
+  }
+
+  function renderOwnerPagination(){
+    const infoEl = document.getElementById('owner-page-info');
+    const pagEl = document.getElementById('owner-pagination');
+    if(!infoEl || !pagEl || !window.ownerSearchPageState) return;
+    const { total, current, pages, size } = window.ownerSearchPageState;
+    infoEl.textContent = `共 ${total} 条，当前第 ${current}/${pages} 页，每页 ${size} 条`;
+
+    const parts = [];
+    parts.push(`<button class="admin-page-btn" ${current<=1?'disabled':''} onclick="if(${current}>1){ ownerSearchPageState.current=${current}-1; searchOwnerCandidates(); }">上一页</button>`);
+    const maxButtons = 7;
+    if(pages <= maxButtons){
+      for(let i=1;i<=pages;i++){
+        parts.push(`<button class="admin-page-btn ${i===current?'active':''}" onclick="ownerSearchPageState.current=${i}; searchOwnerCandidates();">${i}</button>`);
+      }
+    }else{
+      parts.push(`<button class="admin-page-btn ${current===1?'active':''}" onclick="ownerSearchPageState.current=1; searchOwnerCandidates();">1</button>`);
+      const start = Math.max(2, current-2);
+      const end = Math.min(pages-1, current+2);
+      if(start > 2){ parts.push(`<span class="admin-muted">...</span>`); }
+      for(let i=start;i<=end;i++){
+        parts.push(`<button class="admin-page-btn ${i===current?'active':''}" onclick="ownerSearchPageState.current=${i}; searchOwnerCandidates();">${i}</button>`);
+      }
+      if(end < pages-1){ parts.push(`<span class="admin-muted">...</span>`); }
+      parts.push(`<button class="admin-page-btn ${current===pages?'active':''}" onclick="ownerSearchPageState.current=${pages}; searchOwnerCandidates();">${pages}</button>`);
+    }
+    parts.push(`<button class="admin-page-btn" ${current>=pages?'disabled':''} onclick="if(${current}<${pages}){ ownerSearchPageState.current=${current}+1; searchOwnerCandidates(); }">下一页</button>`);
+    pagEl.innerHTML = parts.join('');
   }
   function chooseOwner(id, name){
     document.getElementById('tmod-owner').value = id || '';
@@ -435,26 +780,105 @@
   async function listMembers(){
     const teamId = document.getElementById('tm-teamId').value;
     if(!teamId){ alert('请先输入团队ID'); return; }
-    const res = await fetch(api.teams.members(teamId), { headers: tokenHeader() });
+    const res = await fetch(api.teams.members(teamId, 1, 100), { headers: tokenHeader() });
     const data = await res.json();
     const tbody = document.getElementById('members-tbody');
     tbody.innerHTML = '';
     const list = data.data && data.data.records ? data.data.records : (data.data || []);
     list.forEach(m => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${m.id || ''}</td><td>${m.userId || ''}</td><td>${m.role || ''}</td>
-        <td>
-          <button class="admin-btn danger" onclick="removeMember('${teamId}','${m.userId}')">移除</button>
-        </td>`;
+      const isOwner = String(m.memberRole).toUpperCase() === 'OWNER';
+      const opHtml = isOwner ? '-' : `<button class="admin-btn danger" onclick=\"removeMember('${teamId}','${m.userId}')\">移除</button>`;
+      tr.innerHTML = `<td>${m.id || ''}</td><td>${m.userId || ''}</td><td>${m.memberRole || ''}</td>
+        <td>${opHtml}</td>`;
       tbody.appendChild(tr);
     });
   }
 
   async function removeMember(teamId, userId){
+    // 二次确认，避免误删
+    const ok = confirm('确认删除该成员？');
+    if(!ok){ return; }
     const res = await fetch(api.teams.removeMember(teamId, userId), { method:'POST', headers: tokenHeader() });
     const data = await res.json();
     alert(data.msg || 'OK');
-    listMembers();
+    // 刷新成员弹窗列表
+    loadMembersModal();
+    // 同步底部成员列表（如存在）
+    if(typeof listMembers === 'function'){ listMembers(); }
+  }
+
+  // 成员查看弹窗逻辑
+  function openMembersModal(teamId){
+    document.getElementById('mmv-teamId').value = teamId || '';
+    const tb = document.getElementById('members-modal-tbody');
+    if(tb){ tb.innerHTML = ''; }
+    document.getElementById('members-modal').style.display = 'flex';
+    loadMembersModal();
+  }
+  function closeMembersModal(){
+    document.getElementById('members-modal').style.display = 'none';
+  }
+  async function loadMembersModal(){
+    const teamId = document.getElementById('mmv-teamId').value;
+    if(!teamId){ return; }
+    const res = await fetch(api.teams.members(teamId, 1, 100), { headers: tokenHeader() });
+    const data = await res.json();
+    const tbody = document.getElementById('members-modal-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    const list = data.data && data.data.records ? data.data.records : (data.data || []);
+    list.forEach(m => {
+      const tr = document.createElement('tr');
+      const isOwner = String(m.memberRole).toUpperCase() === 'OWNER';
+      const roleSelect = isOwner ? `${m.memberRole || ''}` : `
+        <select class=\"admin-select\" id=\"mmv-role-${m.userId}\">
+          <option value=\"MEMBER\" ${String(m.memberRole).toUpperCase()==='MEMBER'?'selected':''}>MEMBER</option>
+          <option value=\"MAINTAINER\" ${String(m.memberRole).toUpperCase()==='MAINTAINER'?'selected':''}>MAINTAINER</option>
+        </select>`;
+      const actions = isOwner ? '-' : `
+        <button class=\"admin-btn secondary\" onclick=\"updateMemberRole('${teamId}','${m.userId}')\">保存</button>
+        <button class=\"admin-btn danger\" onclick=\"removeMember('${teamId}','${m.userId}')\">删除</button>`;
+      tr.innerHTML = `<td>${m.userId || ''}</td><td>${roleSelect}</td><td>${actions}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  async function updateMemberRole(teamId, userId){
+    const sel = document.getElementById(`mmv-role-${userId}`);
+    if(!sel){ alert('未找到角色选择控件'); return; }
+    const memberRole = sel.value;
+    try{
+      const res = await fetch(api.teams.updateMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, memberRole }) });
+      const data = await res.json();
+      if(data && data.code === 0 || data.success === true){
+        alert('角色已更新');
+      }else{
+        alert(data.msg || '更新失败');
+      }
+    }catch(e){ alert('请求失败'); }
+    loadMembersModal();
+  }
+
+  // 团队编辑弹窗
+  function openEditTeamModal(id, name, status){
+    document.getElementById('et-id').value = id || '';
+    document.getElementById('et-name').value = name || '';
+    document.getElementById('et-status').value = status || 'ACTIVE';
+    document.getElementById('edit-team-modal').style.display = 'flex';
+  }
+  function closeEditTeamModal(){
+    document.getElementById('edit-team-modal').style.display = 'none';
+  }
+  async function submitEditTeamModal(){
+    const id = document.getElementById('et-id').value;
+    const name = document.getElementById('et-name').value;
+    const status = document.getElementById('et-status').value;
+    const res = await fetch(api.teams.update, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ id, name, status }) });
+    let data = {};
+    try{ data = await res.json(); }catch(e){}
+    alert((data && data.msg) ? data.msg : '保存成功');
+    closeEditTeamModal();
+    loadTeams();
   }
 
   function renderHeaderUser(){
@@ -483,6 +907,8 @@
         switchTab(this.getAttribute('data-tab'));
       });
     });
+    // 默认进入用户管理页
+    switchTab('users');
   });
 
   // 弹窗控制：用户
@@ -490,9 +916,92 @@
   function closeUserModal(){ document.getElementById('user-modal').style.display='none'; }
   function submitUserModal(){ createUser(); }
   // 弹窗控制：团队
-  function openTeamModal(){ document.getElementById('team-modal').style.display='flex'; }
+  function openTeamModal(){
+    document.getElementById('tmod-name').value = '';
+    document.getElementById('tmod-owner').value = '';
+    document.getElementById('tmod-owner-q').value = '';
+    const tb = document.getElementById('tmod-owner-tbody');
+    if(tb){ tb.innerHTML = ''; }
+    document.getElementById('tmod-owner-name').textContent = '未选择';
+    document.getElementById('team-modal').style.display='flex';
+  }
   function closeTeamModal(){ document.getElementById('team-modal').style.display='none'; }
   function submitTeamModal(){ createTeam(); }
+  // 覆盖成员弹窗加载函数，支持分页并显示用户名
+  async function loadMembersModal(){
+    const teamId = document.getElementById('mmv-teamId').value;
+    if(!teamId){ return; }
+    if(typeof window.membersModalPageState === 'undefined'){
+      window.membersModalPageState = { current:1, size:10, pages:1, total:0 };
+    }
+    const page = window.membersModalPageState.current || 1;
+    const size = window.membersModalPageState.size || 10;
+
+    const res = await fetch(api.teams.members(teamId, page, size), { headers: tokenHeader() });
+    const data = await res.json();
+    const tbody = document.getElementById('members-modal-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
+    const list = pageObj.records || [];
+
+    // 预取用户名缓存
+    if(typeof window.userNameCache === 'undefined'){ window.userNameCache = {}; }
+    const userIds = Array.from(new Set(list.map(m => m.userId).filter(Boolean)));
+    const toFetch = userIds.filter(id => !(id in window.userNameCache));
+    if(toFetch.length > 0){
+      try{
+        await Promise.all(toFetch.map(async (id) => {
+          const r = await fetch(api.users.get(id), { headers: tokenHeader() });
+          let jd = {};
+          try{ jd = await r.json(); }catch(e){}
+          const u = (jd && jd.data) ? jd.data : jd;
+          window.userNameCache[id] = (u && u.username) ? u.username : '';
+        }));
+      }catch(e){ /* 忽略单个查询错误 */ }
+    }
+
+    list.forEach(m => {
+      const tr = document.createElement('tr');
+      const isOwner = String(m.memberRole).toUpperCase() === 'OWNER';
+      const uname = (m.userId && window.userNameCache[m.userId]) ? window.userNameCache[m.userId] : (m.userId || '');
+      const roleSelect = isOwner ? `${m.memberRole || ''}` : `
+        <select class=\"admin-select\" id=\"mmv-role-${m.userId}\">\n          <option value=\"MEMBER\" ${String(m.memberRole).toUpperCase()==='MEMBER'?'selected':''}>MEMBER</option>\n          <option value=\"MAINTAINER\" ${String(m.memberRole).toUpperCase()==='MAINTAINER'?'selected':''}>MAINTAINER</option>\n        </select>`;
+      const actions = isOwner ? '-' : `
+        <div class=\"admin-actions-inline\">\n          <button class=\"admin-btn secondary\" onclick=\"updateMemberRole('${teamId}','${m.userId}')\">保存</button>\n          <button class=\"admin-btn danger\" onclick=\"removeMember('${teamId}','${m.userId}')\">删除</button>\n        </div>`;
+      tr.innerHTML = `<td>${uname || '-'}</td><td>${roleSelect}</td><td>${actions}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    const total = pageObj.total != null ? pageObj.total : list.length;
+    const pages = pageObj.pages != null ? pageObj.pages : Math.ceil(total / size);
+    window.membersModalPageState = { current: pageObj.current || page, size: pageObj.size || size, pages, total };
+    renderMembersModalPagination();
+  }
+  function renderMembersModalPagination(){
+    const infoEl = document.getElementById('members-modal-page-info');
+    const pagEl = document.getElementById('members-modal-pagination');
+    const st = window.membersModalPageState || { current:1, size:10, pages:1, total:0 };
+    if(infoEl){ infoEl.textContent = `共 ${st.total} 条，当前第 ${st.current}/${st.pages} 页，每页 ${st.size} 条`; }
+    if(!pagEl) return;
+    const { current, pages } = st;
+    const parts = [];
+    parts.push(`<button class=\"admin-page-btn\" ${current<=1?'disabled':''} onclick=\"if(${current}>1){ membersModalPageState.current=${current}-1; loadMembersModal(); }\">上一页</button>`);
+    const maxButtons = 7;
+    if(pages <= maxButtons){
+      for(let i=1;i<=pages;i++) parts.push(`<button class=\"admin-page-btn ${i===current?'active':''}\" onclick=\"membersModalPageState.current=${i}; loadMembersModal();\">${i}</button>`);
+    }else{
+      const start = Math.max(2, current-2);
+      const end = Math.min(pages-1, current+2);
+      parts.push(`<button class=\"admin-page-btn ${current===1?'active':''}\" onclick=\"membersModalPageState.current=1; loadMembersModal();\">1</button>`);
+      if(start > 2) parts.push(`<span class=\"admin-muted\">...</span>`);
+      for(let i=start;i<=end;i++) parts.push(`<button class=\"admin-page-btn ${i===current?'active':''}\" onclick=\"membersModalPageState.current=${i}; loadMembersModal();\">${i}</button>`);
+      if(end < pages-1) parts.push(`<span class=\"admin-muted\">...</span>`);
+      parts.push(`<button class=\"admin-page-btn ${current===pages?'active':''}\" onclick=\"membersModalPageState.current=${pages}; loadMembersModal();\">${pages}</button>`);
+    }
+    parts.push(`<button class=\"admin-page-btn\" ${current>=pages?'disabled':''} onclick=\"if(${current}<${pages}){ membersModalPageState.current=${current}+1; loadMembersModal(); }\">下一页</button>`);
+    pagEl.innerHTML = parts.join('');
+  }
   </script>
 </body>
 </html>

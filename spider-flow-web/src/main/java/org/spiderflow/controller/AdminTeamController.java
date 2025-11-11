@@ -91,6 +91,26 @@ public class AdminTeamController {
     @PostMapping("/members/remove")
     public JsonBean<Boolean> removeMember(@RequestParam("teamId") String teamId,
                                           @RequestParam("userId") String userId){
-        return new JsonBean<>(teamMemberService.remove(new QueryWrapper<TeamMember>().eq("team_id", teamId).eq("user_id", userId)));
+        TeamMember existing = teamMemberService.getOne(new QueryWrapper<TeamMember>().eq("team_id", teamId).eq("user_id", userId));
+        if(existing != null && "OWNER".equalsIgnoreCase(existing.getMemberRole())){
+            return new JsonBean<>(1, "不能移除拥有者", false);
+        }
+        return new JsonBean<>(0, "删除成功", teamMemberService.remove(new QueryWrapper<TeamMember>().eq("team_id", teamId).eq("user_id", userId)));
+    }
+
+    @PostMapping("/members/update")
+    public JsonBean<Boolean> updateMember(@RequestBody TeamMember member){
+        if(member.getTeamId() == null || member.getUserId() == null || StringUtils.isBlank(member.getMemberRole())){
+            return new JsonBean<>(1, "teamId、userId 与 memberRole 不能为空", false);
+        }
+        TeamMember existing = teamMemberService.getOne(new QueryWrapper<TeamMember>().eq("team_id", member.getTeamId()).eq("user_id", member.getUserId()));
+        if(existing == null){
+            return new JsonBean<>(1, "成员不存在", false);
+        }
+        if("OWNER".equalsIgnoreCase(existing.getMemberRole())){
+            return new JsonBean<>(1, "拥有者角色不可修改", false);
+        }
+        existing.setMemberRole(member.getMemberRole());
+        return new JsonBean<>(0, "更新成功", teamMemberService.updateById(existing));
     }
 }

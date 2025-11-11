@@ -51,13 +51,13 @@ public class AdminUserController {
         return new JsonBean<>(userService.updateById(user));
     }
 
-    @PostMapping("/delete")
-    public JsonBean<Boolean> delete(@RequestParam("id") String id){
+    @DeleteMapping("/delete/{id}")
+    public JsonBean<Boolean> delete(@PathVariable("id") String id){
         return new JsonBean<>(userService.removeById(id));
     }
 
-    @GetMapping("/get")
-    public JsonBean<User> get(@RequestParam("id") String id){
+    @GetMapping("/get/{id}")
+    public JsonBean<User> get(@PathVariable("id") String id){
         return new JsonBean<>(userService.getById(id));
     }
 }
