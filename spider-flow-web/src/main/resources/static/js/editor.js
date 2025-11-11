@@ -760,7 +760,26 @@ function bindToolbarClickAction(editor){
 			resize.setCapture && resize.setCapture();
 			return false;
 		}
+	}).on('click','.btn-fullscreen',function(){
+		var el = document.documentElement;
+		var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+		if(!isFs){
+			var req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+			if(req){ req.call(el); }
+		}else{
+			var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+			if(exit){ exit.call(document); }
+		}
 	})
+
+	// 同步按钮高亮状态
+	function updateFullscreenBtn(){
+		var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+		$('.btn-fullscreen').toggleClass('active', !!isFs);
+	}
+	document.addEventListener('fullscreenchange', updateFullscreenBtn);
+	document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+	document.addEventListener('msfullscreenchange', updateFullscreenBtn);
 	$('.btn-dock-bottom').click();
 }
 function runSpider(debug){

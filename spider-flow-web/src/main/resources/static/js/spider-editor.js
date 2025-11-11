@@ -187,6 +187,35 @@ function SpiderEditor(options){
 				try{ container.focus(); }catch(e){}
 			});
 		}
+		// Ctrl + 鼠标滚轮缩放画布（直接监听 wheel，兼容性更好）
+		this._zoomMin = 0.25;
+		this._zoomMax = 3;
+		if (container){
+			var clampScale = function(v){
+				if (_this._zoomMin != null) v = Math.max(_this._zoomMin, v);
+				if (_this._zoomMax != null) v = Math.min(_this._zoomMax, v);
+				return v;
+			};
+			var handleWheelZoom = function(e){
+				// 仅在按下 Ctrl/Meta 时缩放画布
+				if (!(e && (e.ctrlKey || (mxClient.IS_MAC && e.metaKey)))){
+					return;
+				}
+				var scale = _this.graph.view.scale || 1;
+				var delta = (typeof e.deltaY === 'number') ? e.deltaY : ((typeof e.wheelDelta === 'number') ? -e.wheelDelta : (e.detail || 0));
+				var dirUp = delta < 0; // 上滚放大，下滚缩小
+				var step = dirUp ? 1.1 : 0.9;
+				var next = clampScale(scale * step);
+				_this.graph.zoomTo(next);
+				if (typeof e.preventDefault === 'function') e.preventDefault();
+				if (typeof e.stopPropagation === 'function') e.stopPropagation();
+			};
+			// 主流浏览器
+			try{ container.addEventListener('wheel', handleWheelZoom, { passive: false }); }catch(e){ container.addEventListener('wheel', handleWheelZoom, false); }
+			// 旧版事件（部分浏览器）
+			container.addEventListener('mousewheel', handleWheelZoom, false);
+			container.addEventListener('DOMMouseScroll', handleWheelZoom, false);
+		}
 		// 空格键平移模式：按住空格后，左键拖拽为平移；松开恢复为框选
 		this._spacePanning = false;
 		mxEvent.addListener(document, 'keydown', function(evt){
