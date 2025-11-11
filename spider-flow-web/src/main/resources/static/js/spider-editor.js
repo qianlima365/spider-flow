@@ -254,10 +254,21 @@ function SpiderEditor(options){
 			});
 			// 画布点击触发自动保存（节流：每分钟一次）
 			var lastAutoSaveAt = 0;
-			var autoSaveInterval = 10 * 1000;
+			var autoSaveInterval = 10 * 1000; // 每分钟
+			var lastSavedXML = null;
 			function triggerAutoSave(reason){
 				var now = Date.now();
 				if (now - lastAutoSaveAt < autoSaveInterval){
+					return; // 节流：距离上次保存不足一周期
+				}
+				var currentXML = _this.getXML();
+				// 初始化时记录当前XML，避免首次打开立即触发保存
+				if (lastSavedXML === null){
+					lastSavedXML = currentXML;
+					return;
+				}
+				// 仅在当前XML与上次保存的XML不同时触发保存
+				if (currentXML === lastSavedXML){
 					return;
 				}
 				lastAutoSaveAt = now;
@@ -274,10 +285,12 @@ function SpiderEditor(options){
 			_this.graph.addListener(mxEvent.CLICK, function(sender, evt){
 				triggerAutoSave('graph-click');
 			});
-			// 每分钟自动保存一次
+			// 每分钟自动保存一次（仅在有变更时触发）
 			setInterval(function(){ triggerAutoSave('interval'); }, autoSaveInterval);
-			// 监听自动保存成功事件，在画布右上角提示
+			// 监听自动保存成功事件，更新 lastSavedXML 并在画布右上角提示
 			document.addEventListener('spider:autoSaveSuccess', function(){
+				// 成功后将当前XML记录为已保存状态
+				try{ lastSavedXML = _this.getXML(); lastAutoSaveAt = Date.now(); }catch(e){}
 				try{
 					var toast = document.createElement('div');
 					toast.textContent = '自动保存成功';
