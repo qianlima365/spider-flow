@@ -252,9 +252,9 @@ function SpiderEditor(options){
 			mxEvent.addListener(container, 'mouseleave', function(){
 				container.classList.remove('panning-active');
 			});
-			// 画布点击触发自动保存（节流：每分钟一次）
+			// 画布点击触发自动保存（节流：每5分钟一次）
 			var lastAutoSaveAt = 0;
-			var autoSaveInterval = 10 * 1000; // 每分钟
+			var autoSaveInterval = 5 * 60 * 1000; // 每5分钟
 			var lastSavedXML = null;
 			function triggerAutoSave(reason){
 				var now = Date.now();
@@ -285,7 +285,7 @@ function SpiderEditor(options){
 			_this.graph.addListener(mxEvent.CLICK, function(sender, evt){
 				triggerAutoSave('graph-click');
 			});
-			// 每分钟自动保存一次（仅在有变更时触发）
+			// 每5分钟自动保存一次（仅在有变更时触发）
 			setInterval(function(){ triggerAutoSave('interval'); }, autoSaveInterval);
 			// 监听自动保存成功事件，更新 lastSavedXML 并在画布右上角提示
 			document.addEventListener('spider:autoSaveSuccess', function(){

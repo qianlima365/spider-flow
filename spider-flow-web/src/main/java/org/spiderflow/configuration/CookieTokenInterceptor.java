@@ -17,15 +17,22 @@ public class CookieTokenInterceptor implements HandlerInterceptor {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private org.spiderflow.core.service.UserSessionService userSessionService;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String uri = request.getRequestURI();
         // 白名单交由WebMvcConfig的excludePathPatterns处理，这里直接做鉴权
 
-        String token = readTokenFromCookies(request.getCookies());
+        // 优先从请求头读取令牌，其次回退到 Cookie
+        String token = readTokenFromHeaders(request);
+        if(StringUtils.isBlank(token)){
+            token = readTokenFromCookies(request.getCookies());
+        }
         if(StringUtils.isNotBlank(token)){
-            User u = userService.findByToken(token);
-            if(u == null){
+            org.spiderflow.core.model.UserSession session = userSessionService.findValidByToken(token);
+            if(session == null){
                 // token 无效或过期，清除客户端Cookie并强制顶层跳转到登录页
                 clearTokenCookies(response);
                 if(isAjaxRequest(request) || !expectsHtml(request)){
@@ -35,6 +42,24 @@ public class CookieTokenInterceptor implements HandlerInterceptor {
                     writeFullPageRedirectHtml(response, "/login.html");
                 }
                 return false;
+            }
+            // 有效 token，执行滑动过期：当剩余时间较短时顺延过期时间并刷新Cookie
+            long now = System.currentTimeMillis();
+            long remainingMs = session.getExpireAt() == null ? 0L : (session.getExpireAt().getTime() - now);
+            long thresholdMs = 15L * 60 * 1000; // 阈值：15分钟
+            if(remainingMs > 0 && remainingMs < thresholdMs){
+                long ttlMs = userSessionService.getDefaultTtlMs();
+                boolean ok = userSessionService.extendSessionExpiry(session, ttlMs);
+                if(ok){
+                    String cookieName = findTokenCookieName(request.getCookies(), token);
+                    if(cookieName != null){
+                        Cookie refreshed = new Cookie(cookieName, token);
+                        refreshed.setPath("/");
+                        refreshed.setHttpOnly(true);
+                        refreshed.setMaxAge((int)(ttlMs / 1000));
+                        response.addCookie(refreshed);
+                    }
+                }
             }
             // 有效 token 直接通过
             return true;
@@ -78,6 +103,26 @@ public class CookieTokenInterceptor implements HandlerInterceptor {
         response.addCookie(c2);
     }
 
+    private String findTokenCookieName(Cookie[] cookies, String token){
+        if(cookies == null || StringUtils.isBlank(token)) return null;
+        String name = null;
+        for(Cookie c : cookies){
+            if(StringUtils.equals(c.getValue(), token)){
+                name = c.getName();
+                break;
+            }
+        }
+        if(name == null){
+            for(Cookie c : cookies){
+                if("X-Admin-Token".equalsIgnoreCase(c.getName()) || "X-Token".equalsIgnoreCase(c.getName())){
+                    name = c.getName();
+                    break;
+                }
+            }
+        }
+        return name;
+    }
+
     private void writeTopRedirectHtml(HttpServletResponse response, String target) throws Exception {
         response.setStatus(200);
         response.setContentType("text/html;charset=UTF-8");
@@ -116,5 +161,16 @@ public class CookieTokenInterceptor implements HandlerInterceptor {
         response.setStatus(401);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write("{\"code\":401,\"msg\":\"Unauthorized: token expired or missing\"}");
+    }
+
+    private String readTokenFromHeaders(HttpServletRequest request){
+        String t = request.getHeader("X-Admin-Token");
+        if(StringUtils.isBlank(t)){
+            t = request.getHeader("X-Token");
+        }
+        if(StringUtils.isNotBlank(t) && !StringUtils.equalsAnyIgnoreCase(t, "undefined", "null")){
+            return t;
+        }
+        return null;
     }
 }

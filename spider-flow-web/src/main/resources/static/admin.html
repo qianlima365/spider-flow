@@ -294,6 +294,7 @@
     </div>
   </div>
 
+  <script src="js/cron/jquery-2.1.4.min.js"></script>
   <script>
   /* 分页样式 */
   (function(){
@@ -342,8 +343,14 @@
 
     const page = window.usersPageState.current || 1;
     const size = window.usersPageState.size || 10;
-    const res = await fetch(api.users.list(q, page, size), { headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.users.list(q, page, size),
+      method: 'GET',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '';
     const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
@@ -412,8 +419,16 @@
     const username = document.getElementById('um-username').value;
     const password = document.getElementById('um-password').value;
     const role = document.getElementById('um-role').value;
-    const res = await fetch(api.users.create, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ username, password, role }) });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.users.create,
+      method: 'POST',
+      headers: tokenHeader(),
+      data: JSON.stringify({ username, password, role }),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      contentType: 'application/json',
+      dataType: 'json'
+    });
     alert(data.msg || '创建用户成功');
     loadUsers();
     closeUserModal();
@@ -421,8 +436,14 @@
 
   async function delUser(id){
     if(!confirm('确认删除该用户？')) return;
-    const res = await fetch(api.users.delete(id), { method:'DELETE', headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.users.delete(id),
+      method: 'DELETE',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     alert(data.msg || '删除用户成功');
     loadUsers();
   }
@@ -441,9 +462,19 @@
     const id = document.getElementById('eu-id').value;
     const username = document.getElementById('eu-username').value;
     const role = document.getElementById('eu-role').value;
-    const res = await fetch(api.users.update, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ id, username, role }) });
     let data = {};
-    try{ data = await res.json(); }catch(e){}
+    try{
+      data = await $.ajax({
+        url: api.users.update,
+        method: 'POST',
+        headers: tokenHeader(),
+        data: JSON.stringify({ id, username, role }),
+        xhrFields: { withCredentials: true },
+        crossDomain: true,
+        contentType: 'application/json',
+        dataType: 'json'
+      });
+    }catch(e){}
     alert((data && data.msg) ? data.msg : '保存成功');
     closeEditUserModal();
     loadUsers();
@@ -456,8 +487,14 @@
 
     const page = window.teamsPageState.current || 1;
     const size = window.teamsPageState.size || 10;
-    const res = await fetch(api.teams.list(q, page, size), { headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.list(q, page, size),
+      method: 'GET',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     const tbody = document.getElementById('teams-tbody');
     tbody.innerHTML = '';
     const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
@@ -470,9 +507,17 @@
     if(toFetch.length > 0){
       try{
         await Promise.all(toFetch.map(async (id) => {
-          const r = await fetch(api.users.get(id), { headers: tokenHeader() });
           let jd = {};
-          try{ jd = await r.json(); }catch(e){}
+          try{
+            jd = await $.ajax({
+              url: api.users.get(id),
+              method: 'GET',
+              headers: tokenHeader(),
+              xhrFields: { withCredentials: true },
+              crossDomain: true,
+              dataType: 'json'
+            });
+          }catch(e){}
           const u = (jd && jd.data) ? jd.data : jd;
           window.ownerNameCache[id] = (u && u.username) ? u.username : '';
         }));
@@ -534,8 +579,16 @@
     const ownerUserId = document.getElementById('tmod-owner').value;
     if(!name){ alert('团队名称为必填'); return; }
     if(!ownerUserId){ alert('请选择团队拥有者（从用户列表中选择）'); return; }
-    const res = await fetch(api.teams.create, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ name, ownerUserId }) });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.create,
+      method: 'POST',
+      headers: tokenHeader(),
+      data: JSON.stringify({ name, ownerUserId }),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      contentType: 'application/json',
+      dataType: 'json'
+    });
     alert(data.msg || '创建团队成功');
     loadTeams();
     closeTeamModal();
@@ -543,8 +596,14 @@
 
   async function delTeam(id){
     if(!confirm('确认删除该团队？')) return;
-    const res = await fetch(api.teams.delete(id), { method:'POST', headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.delete(id),
+      method: 'POST',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     alert(data.msg || '删除团队成功');
     loadTeams();
   }
@@ -553,8 +612,16 @@
     const teamId = document.getElementById('tm-teamId').value;
     const userId = document.getElementById('tm-userId').value;
     const memberRole = document.getElementById('tm-role').value;
-    const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, memberRole }) });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.addMember,
+      method: 'POST',
+      headers: tokenHeader(),
+      data: JSON.stringify({ teamId, userId, memberRole }),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      contentType: 'application/json',
+      dataType: 'json'
+    });
     alert(data.msg || '添加成员成功');
     listMembers();
   }
@@ -592,8 +659,14 @@
       let page = 1;
       const size = 50;
       while(true){
-        const res = await fetch(api.teams.members(teamId, page, size), { headers: tokenHeader() });
-        const jd = await res.json();
+        const jd = await $.ajax({
+          url: api.teams.members(teamId, page, size),
+          method: 'GET',
+          headers: tokenHeader(),
+          xhrFields: { withCredentials: true },
+          crossDomain: true,
+          dataType: 'json'
+        });
         const pageObj = (jd && jd.data && (jd.data.records || jd.data.total !== undefined)) ? jd.data : jd;
         const list = pageObj.records || [];
         list.forEach(m => {
@@ -618,8 +691,14 @@
 
     const page = window.memberSearchPageState.current || 1;
     const size = window.memberSearchPageState.size || 10;
-    const res = await fetch(api.users.list(q, page, size), { headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.users.list(q, page, size),
+      method: 'GET',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     const tbody = document.getElementById('mm-users-tbody');
     tbody.innerHTML = '';
     const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
@@ -702,8 +781,16 @@
     let success = 0, fail = 0;
     for(const uid of selected){
       try{
-        const res = await fetch(api.teams.addMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId: uid, memberRole: role }) });
-        const jd = await res.json();
+        const jd = await $.ajax({
+          url: api.teams.addMember,
+          method: 'POST',
+          headers: tokenHeader(),
+          data: JSON.stringify({ teamId, userId: uid, memberRole: role }),
+          xhrFields: { withCredentials: true },
+          crossDomain: true,
+          contentType: 'application/json',
+          dataType: 'json'
+        });
         if(jd && (jd.code === 0 || jd.success === true || jd.msg === 'OK' || jd.data)) success++; else fail++;
       }catch(e){ fail++; }
     }
@@ -724,8 +811,14 @@
 
     const page = window.ownerSearchPageState.current || 1;
     const size = window.ownerSearchPageState.size || 10;
-    const res = await fetch(api.users.list(q, page, size), { headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.users.list(q, page, size),
+      method: 'GET',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     const tbody = document.getElementById('tmod-owner-tbody');
     tbody.innerHTML = '';
     const pageObj = (data && data.data && (data.data.records || data.data.total !== undefined)) ? data.data : data;
@@ -780,8 +873,14 @@
   async function listMembers(){
     const teamId = document.getElementById('tm-teamId').value;
     if(!teamId){ alert('请先输入团队ID'); return; }
-    const res = await fetch(api.teams.members(teamId, 1, 100), { headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.members(teamId, 1, 100),
+      method: 'GET',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     const tbody = document.getElementById('members-tbody');
     tbody.innerHTML = '';
     const list = data.data && data.data.records ? data.data.records : (data.data || []);
@@ -799,8 +898,14 @@
     // 二次确认，避免误删
     const ok = confirm('确认删除该成员？');
     if(!ok){ return; }
-    const res = await fetch(api.teams.removeMember(teamId, userId), { method:'POST', headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.removeMember(teamId, userId),
+      method: 'POST',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     alert(data.msg || 'OK');
     // 刷新成员弹窗列表
     loadMembersModal();
@@ -822,8 +927,14 @@
   async function loadMembersModal(){
     const teamId = document.getElementById('mmv-teamId').value;
     if(!teamId){ return; }
-    const res = await fetch(api.teams.members(teamId, 1, 100), { headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.members(teamId, 1, 100),
+      method: 'GET',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     const tbody = document.getElementById('members-modal-tbody');
     if(!tbody) return;
     tbody.innerHTML = '';
@@ -848,8 +959,16 @@
     if(!sel){ alert('未找到角色选择控件'); return; }
     const memberRole = sel.value;
     try{
-      const res = await fetch(api.teams.updateMember, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ teamId, userId, memberRole }) });
-      const data = await res.json();
+      const data = await $.ajax({
+        url: api.teams.updateMember,
+        method: 'POST',
+        headers: tokenHeader(),
+        data: JSON.stringify({ teamId, userId, memberRole }),
+        xhrFields: { withCredentials: true },
+        crossDomain: true,
+        contentType: 'application/json',
+        dataType: 'json'
+      });
       if(data && data.code === 0 || data.success === true){
         alert('角色已更新');
       }else{
@@ -873,9 +992,19 @@
     const id = document.getElementById('et-id').value;
     const name = document.getElementById('et-name').value;
     const status = document.getElementById('et-status').value;
-    const res = await fetch(api.teams.update, { method:'POST', headers: tokenHeader(), body: JSON.stringify({ id, name, status }) });
     let data = {};
-    try{ data = await res.json(); }catch(e){}
+    try{
+      data = await $.ajax({
+        url: api.teams.update,
+        method: 'POST',
+        headers: tokenHeader(),
+        data: JSON.stringify({ id, name, status }),
+        xhrFields: { withCredentials: true },
+        crossDomain: true,
+        contentType: 'application/json',
+        dataType: 'json'
+      });
+    }catch(e){}
     alert((data && data.msg) ? data.msg : '保存成功');
     closeEditTeamModal();
     loadTeams();
@@ -937,8 +1066,14 @@
     const page = window.membersModalPageState.current || 1;
     const size = window.membersModalPageState.size || 10;
 
-    const res = await fetch(api.teams.members(teamId, page, size), { headers: tokenHeader() });
-    const data = await res.json();
+    const data = await $.ajax({
+      url: api.teams.members(teamId, page, size),
+      method: 'GET',
+      headers: tokenHeader(),
+      xhrFields: { withCredentials: true },
+      crossDomain: true,
+      dataType: 'json'
+    });
     const tbody = document.getElementById('members-modal-tbody');
     if(!tbody) return;
     tbody.innerHTML = '';
@@ -952,9 +1087,17 @@
     if(toFetch.length > 0){
       try{
         await Promise.all(toFetch.map(async (id) => {
-          const r = await fetch(api.users.get(id), { headers: tokenHeader() });
           let jd = {};
-          try{ jd = await r.json(); }catch(e){}
+          try{
+            jd = await $.ajax({
+              url: api.users.get(id),
+              method: 'GET',
+              headers: tokenHeader(),
+              xhrFields: { withCredentials: true },
+              crossDomain: true,
+              dataType: 'json'
+            });
+          }catch(e){}
           const u = (jd && jd.data) ? jd.data : jd;
           window.userNameCache[id] = (u && u.username) ? u.username : '';
         }));

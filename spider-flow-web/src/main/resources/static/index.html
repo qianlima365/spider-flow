@@ -8,53 +8,78 @@
 		<link rel="stylesheet" href="css/index.css" />
 		<script>SPIDER_FLOW_VERSION = 'v0.5.0'</script>
 		<script type="text/javascript" src="js/layui/layui.all.js" ></script>
+        <script src="js/cron/jquery-2.1.4.min.js"></script>
 		<script>
-		// 平台入口页 TOKEN 守卫：本地令牌或 Cookie 登录态
-		(function(){
-		  function readToken(name){
-		    var v = localStorage.getItem(name);
-		    if(!v || v === 'undefined' || v === 'null' || (/^\s*$/.test(v))){ return ''; }
-		    return v;
-		  }
-		  function getPlatformToken(){
-			return readToken('userToken') || readToken('adminToken') || '';
-		  }
-		  function topRedirect(url){
-		    if(window.top){ window.top.location.replace(url); } else { window.location.replace(url); }
-		  }
+			// 平台入口页 TOKEN 守卫：本地令牌或 Cookie 登录态
+			(function(){
+				// 步骤1：定义工具函数（读取令牌 / 顶层跳转）
+				// 从 localStorage 读取指定名称的令牌；过滤无效值（undefined/null/空白）
+				function readToken(name){
+					var v = localStorage.getItem(name);
+					if(!v || v === 'undefined' || v === 'null' || (/^\s*$/.test(v))){ return ''; }
+					return v;
+				}
+				// 返回平台令牌：优先使用普通用户 token，其次为管理员 token
+				function getPlatformToken(){
+					return readToken('userToken') || readToken('adminToken') || '';
+				}
+				// 顶层重定向：如果在 iframe 中则跳转顶层，否则当前页跳转
+				function topRedirect(url){
+					if(window.top){ window.top.location.replace(url); } else { window.location.replace(url); }
+				}
 
-		  var token = getPlatformToken();
-		  if(!token){
-		    // 无本地令牌时，探测 Cookie 登录态（HttpOnly 无法直接读，走网络校验）
-		    topRedirect('/login.html');
-		  }
+				// 步骤2：读取本地平台令牌（如后续需要可用于请求头）
+				var token = getPlatformToken();
 
-		  try{
-		      fetch('/auth/me', { method:'GET', credentials:'include', headers:{ 'Accept':'application/json' } })
-		        .then(function(resp){ if(resp && resp.status === 200){ return resp.json(); } throw new Error('unauth'); })
-		        .then(function(data){ /* Cookie 有效则继续加载首页 */ })
-		        .catch(function(){
-		          try{ localStorage.removeItem('userToken'); localStorage.removeItem('adminToken'); }catch(e){}
-		          topRedirect('/login.html');
-		        });
-		    }catch(e){ topRedirect('/login.html'); }
+				// 步骤3：仅使用 jQuery 的 AJAX 调用 /auth/me 校验登录态
+				// 成功（已登录）：留在首页继续加载；失败：清理本地令牌并跳转登录页
+				$.ajax({
+					url: '/auth/me',
+					method: 'GET',
+					headers: { 'Accept': 'application/json' },
+					xhrFields: { withCredentials: true },
+					crossDomain: true,
+					dataType: 'json'
+				})
+				// 已登录：无操作，停留在首页即可
+				.done(function(){ /* 已登录，继续加载首页 */ })
+				.fail(function(){
+					// 未登录或校验失败：清理本地令牌并统一跳转登录页
+					try{ 
+						localStorage.removeItem('userToken'); 
+						localStorage.removeItem('adminToken'); 
+					}catch(e){}
+				topRedirect('/login.html');
+				});
 
-		  // 如果有 jQuery(Ajax)，统一附加令牌并在 401 时回跳登录
-		  if(window.$ && $.ajaxSetup){
-		    $.ajaxSetup({
-		      beforeSend: function(xhr){
-		        var tk = getPlatformToken();
-		        if(tk){ xhr.setRequestHeader('X-Token', tk); }
-		      },
-		      complete: function(xhr){
-		        if(xhr && xhr.status === 401){
-		          try{ localStorage.removeItem('userToken'); localStorage.removeItem('adminToken'); }catch(e){}
-		          topRedirect('/login.html');
-		        }
-		      }
-		    });
-		  }
-		})();
+			// 步骤4：配置全局 AJAX 行为
+			// 全局 AJAX 配置：
+			// - 请求前附加本地令牌到请求头 X-Token（若存在）
+			// - 请求完成后若状态码为 401，统一清理本地令牌并跳转登录页
+			if(window.$ && $.ajaxSetup){
+				$.ajaxSetup({
+				beforeSend: function(xhr){
+					// 兼容普通用户与管理员两种令牌：优先用户令牌，其次管理员令牌
+					var tkUser = readToken('userToken');
+					var tkAdmin = readToken('adminToken');
+					if(tkUser){
+						xhr.setRequestHeader('X-Token', tkUser);
+					}else if(tkAdmin){
+						xhr.setRequestHeader('X-Admin-Token', tkAdmin);
+					}
+				},
+				complete: function(xhr){
+					if(xhr && xhr.status === 401){
+						try{ 
+							localStorage.removeItem('userToken'); 
+							localStorage.removeItem('adminToken'); 
+						}catch(e){}
+					topRedirect('/login.html');
+					}
+				}
+				});
+			}
+			})();
 		</script>
 		<script type="text/javascript" src="js/index.js" ></script>
 	</head>
@@ -88,26 +113,17 @@
 
             <script>
             (function(){
-                // 统一的退出调用：优先使用 jQuery 的 $.ajax，其次 fetch
+                // 统一的退出调用：仅使用 jQuery 的 $.ajax
                 function callLogout(){
                     return new Promise(function(resolve){
-                        try{
-                            if(window.$ && $.ajax){
-                                $.ajax({
-                                    url: '/auth/logout',
-                                    method: 'POST',
-                                    headers: { 'Accept': 'application/json' },
-                                    xhrFields: { withCredentials: true },
-                                    complete: function(){ resolve(); }
-                                });
-                                return;
-                            }
-                        }catch(e){}
-                        try{
-                            fetch('/auth/logout', { method:'POST', credentials:'include', headers:{ 'Accept':'application/json' } })
-                                .then(function(){ resolve(); })
-                                .catch(function(){ resolve(); });
-                        }catch(e){ resolve(); }
+                        $.ajax({
+                            url: '/auth/logout',
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            xhrFields: { withCredentials: true },
+                            crossDomain: true,
+                            complete: function(){ resolve(); }
+                        });
                     });
                 }
                 function initUserMenu(){

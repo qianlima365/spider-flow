@@ -191,3 +191,15 @@ CREATE TABLE IF NOT EXISTS `sp_team_member` (
 INSERT INTO `sp_user` (`username`,`password`,`role`,`status`,`token`) VALUES
   ('admin','admin123','SUPER_ADMIN','ACTIVE','ADMIN_INIT_TOKEN')
 ON DUPLICATE KEY UPDATE `username`=VALUES(`username`);
+-- 会话表：支持同一账号多人登录互不影响
+CREATE TABLE IF NOT EXISTS `sp_user_session` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `token` VARCHAR(64) NOT NULL,
+  `expire_at` DATETIME NOT NULL,
+  `revoked` TINYINT(1) NOT NULL DEFAULT 0,
+  `create_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_token` (`token`),
+  KEY `idx_user_expire` (`user_id`, `expire_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

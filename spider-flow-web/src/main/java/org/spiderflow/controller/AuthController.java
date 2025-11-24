@@ -5,6 +5,8 @@ import org.spiderflow.core.model.User;
 import org.spiderflow.core.service.UserService;
 import org.spiderflow.model.JsonBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.Cookie;
@@ -21,25 +23,44 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private org.spiderflow.core.service.UserSessionService userSessionService;
+
     public static class LoginRequest {
         public String username;
         public String password;
+        public Boolean remember;
     }
 
     @GetMapping("/me")
-    public JsonBean<Map<String, Object>> me(HttpServletRequest request){
-        String token = readTokenFromCookies(request.getCookies());
+    public ResponseEntity<JsonBean<Map<String, Object>>> me(HttpServletRequest request){
+        String token = readTokenFromHeaders(request);
         if(StringUtils.isBlank(token)){
-            return new JsonBean<>(401, "Unauthorized: token missing", null);
+            token = readTokenFromCookies(request.getCookies());
         }
-        User u = userService.findByToken(token);
+        if(StringUtils.isBlank(token)){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new JsonBean<>(-1, "Unauthorized: token missing", null));
+        }
+        org.spiderflow.core.model.UserSession session = userSessionService.findValidByToken(token);
+        if(session == null){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new JsonBean<>(-1, "Unauthorized: token invalid or expired", null));
+        }
+        User u = userService.getById(session.getUserId());
         if(u == null){
-            return new JsonBean<>(401, "Unauthorized: token invalid or expired", null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new JsonBean<>(-1, "Unauthorized: user not found", null));
         }
         Map<String,Object> resp = new HashMap<>();
         resp.put("username", u.getUsername());
         resp.put("role", u.getRole());
-        return new JsonBean<>(0, "ok", resp);
+        long nowMs = System.currentTimeMillis();
+        long expMs = (session.getExpireAt() != null) ? session.getExpireAt().getTime() : 0L;
+        long remainingSec = Math.max((expMs - nowMs) / 1000L, 0L);
+        resp.put("expireAt", expMs);
+        resp.put("remainingSeconds", remainingSec);
+        return ResponseEntity.ok(new JsonBean<>(0, "ok", resp));
     }
 
     private String readTokenFromCookies(Cookie[] cookies){
@@ -51,6 +72,17 @@ public class AuthController {
                     return v;
                 }
             }
+        }
+        return null;
+    }
+
+    private String readTokenFromHeaders(HttpServletRequest request){
+        String t = request.getHeader("X-Admin-Token");
+        if(StringUtils.isBlank(t)){
+            t = request.getHeader("X-Token");
+        }
+        if(StringUtils.isNotBlank(t) && !StringUtils.equalsAnyIgnoreCase(t, "undefined", "null")){
+            return t;
         }
         return null;
     }
@@ -67,17 +99,16 @@ public class AuthController {
         if(!StringUtils.equals(user.getPassword(), req.password)){
             return new JsonBean<>(1, "密码错误", null);
         }
-        String token = userService.issueTokenForUser(user);
+        // 创建独立会话令牌（不覆盖用户表token），支持记住我长TTL
+        boolean remember = req.remember != null && req.remember;
+        Long ttlMs = remember ? 7L * 24 * 60 * 60 * 1000 : null; // 记住我：7天；否则默认TTL
+        org.spiderflow.core.model.UserSession session = userSessionService.issueSessionForUser(user, ttlMs);
+        String token = session.getToken();
         Map<String,Object> resp = new HashMap<>();
         resp.put("token", token);
         resp.put("username", user.getUsername());
         resp.put("role", user.getRole());
-        // 根据角色设置不同的响应头，前端据此保存并跳转
-        int maxAgeSeconds = 0;
-        if(user.getTokenExpireAt() != null){
-            long delta = user.getTokenExpireAt().getTime() - System.currentTimeMillis();
-            maxAgeSeconds = (int) Math.max(delta / 1000L, 0);
-        }
+        int maxAgeSeconds = (int)Math.max((session.getExpireAt().getTime() - System.currentTimeMillis()) / 1000L, 0);
         if("SUPER_ADMIN".equalsIgnoreCase(user.getRole())){
             response.setHeader("X-Admin-Token", token);
             javax.servlet.http.Cookie adminCookie = new javax.servlet.http.Cookie("X-Admin-Token", token);
@@ -95,6 +126,8 @@ public class AuthController {
             userCookie.setMaxAge(maxAgeSeconds);
             response.addCookie(userCookie);
         }
+        System.out.println("maxAgeSeconds: " + maxAgeSeconds);
+        System.out.println("resp: " + resp);
         return new JsonBean<>(0, "登录成功", resp);
     }
 
@@ -102,7 +135,7 @@ public class AuthController {
     public JsonBean<Boolean> logout(HttpServletRequest request, HttpServletResponse response){
         String token = readTokenFromCookies(request.getCookies());
         if(StringUtils.isNotBlank(token)){
-            try{ userService.expireToken(token); }catch(Exception ignore){}
+            try{ userSessionService.expireSession(token); }catch(Exception ignore){}
         }
         // 清除客户端 Cookie（HttpOnly）
         Cookie c1 = new Cookie("X-Admin-Token", "");

@@ -105,23 +105,26 @@ public class SpiderFlowService extends ServiceImpl<SpiderFlowMapper, SpiderFlow>
 		//解析corn,获取并设置任务的开始时间
 		if(StringUtils.isNotEmpty(spiderFlow.getCron())){
 			CronTrigger trigger = TriggerBuilder.newTrigger()
-							.withIdentity("Caclulate Next Execute Date")
-							.withSchedule(CronScheduleBuilder.cronSchedule(spiderFlow.getCron()))
-							.build();
+						.withIdentity("Caclulate Next Execute Date")
+						.withSchedule(CronScheduleBuilder.cronSchedule(spiderFlow.getCron()))
+						.build();
 			spiderFlow.setNextExecuteTime(trigger.getStartTime());
 		}
-		if(StringUtils.isNotEmpty(spiderFlow.getId())){	//update 任务
+		if(StringUtils.isNotEmpty(spiderFlow.getId())){	// update 任务
+			// 执行更新
 			sfMapper.updateSpiderFlow(spiderFlow.getId(), spiderFlow.getName(), spiderFlow.getXml());
 			spiderJobManager.remove(spiderFlow.getId());
 			spiderFlow = getById(spiderFlow.getId());
 			if("1".equals(spiderFlow.getEnabled()) && StringUtils.isNotEmpty(spiderFlow.getCron())){
 				spiderJobManager.addJob(spiderFlow);
 			}
-		}else{//insert 任务
+		}else{
+			// insert 任务：首次保存时记录当前XML为历史版本
 			String id = UUID.randomUUID().toString().replace("-", "");
 			sfMapper.insertSpiderFlow(id, spiderFlow.getName(), spiderFlow.getXml());
 			spiderFlow.setId(id);
 		}
+
 		File file = new File(workspace,spiderFlow.getId() + File.separator + "xmls" + File.separator + System.currentTimeMillis() + ".xml");
 		try {
 			FileUtils.write(file,spiderFlow.getXml(),"UTF-8");

@@ -15,6 +15,9 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private org.spiderflow.core.service.UserSessionService userSessionService;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String uri = request.getRequestURI();
@@ -25,7 +28,19 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
         // 其它 /admin/** 必须携带超级管理员令牌
         if(uri.startsWith("/admin/")){
             String token = request.getHeader("X-Admin-Token");
-            User admin = userService.findByTokenAndRole(token, "SUPER_ADMIN");
+            if(token == null || token.trim().isEmpty()){
+                javax.servlet.http.Cookie[] cookies = request.getCookies();
+                if(cookies != null){
+                    for(javax.servlet.http.Cookie c : cookies){
+                        if("X-Admin-Token".equalsIgnoreCase(c.getName())){
+                            token = c.getValue();
+                            break;
+                        }
+                    }
+                }
+            }
+            org.spiderflow.core.model.UserSession session = userSessionService.findValidByToken(token);
+            User admin = (session == null) ? null : userService.getById(session.getUserId());
             if(admin == null){
                 // 区分请求类型：HTML页返回顶层跳转脚本；Ajax/非HTML返回401 JSON
                 String xrw = request.getHeader("X-Requested-With");
@@ -44,6 +59,12 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write("{\"code\":401,\"msg\":\"Unauthorized: require SUPER_ADMIN token\"}");
                 }
+                return false;
+            }
+            if(!"SUPER_ADMIN".equalsIgnoreCase(admin.getRole())){
+                response.setStatus(401);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":401,\"msg\":\"Unauthorized: require SUPER_ADMIN role\"}");
                 return false;
             }
         }

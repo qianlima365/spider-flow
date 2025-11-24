@@ -22,25 +22,26 @@
   <div id="login-app">
     <div class="login-card">
       <div class="login-header">登录</div>
-      <div class="login-body">
+      <form id="login-form" class="login-body" autocomplete="on" onsubmit="return false;">
         <div class="login-row">
           <label for="lg-username">用户名 <span class="req-star">*</span></label>
-          <input id="lg-username" class="login-input" placeholder="请输入用户名" required />
+          <input id="lg-username" name="username" class="login-input" placeholder="请输入用户名" autocomplete="username" required />
         </div>
         <div class="login-row">
           <label for="lg-password">密码 <span class="req-star">*</span></label>
-          <input id="lg-password" class="login-input" type="password" placeholder="请输入密码" required />
+          <input id="lg-password" name="password" class="login-input" type="password" placeholder="请输入密码" autocomplete="current-password" required />
         </div>
         <div class="login-row" style="display:flex;align-items:center;gap:8px;">
-          <input id="lg-remember" type="checkbox" />
+          <input id="lg-remember" name="remember" type="checkbox" />
           <label for="lg-remember" style="user-select:none;cursor:pointer;">记住我</label>
         </div>
-        <button class="login-btn" onclick="login()">登录</button>
+        <button class="login-btn" type="button" onclick="login()">登录</button>
         <div id="lg-status" class="login-status"></div>
-      </div>
+      </form>
     </div>
   </div>
 
+  <script src="js/cron/jquery-2.1.4.min.js"></script>
   <script>
     // 顶层跳转，确保不在右侧iframe内刷新
     function topRedirect(url){ if(window.top){ window.top.location.href = url; } else { window.location.href = url; } }
@@ -69,6 +70,28 @@
       }catch(e){}
     })();
 
+    // 仅使用 jQuery.ajax 的通用 JSON 请求封装
+    function ajaxJson(url, method, body){
+      return new Promise(function(resolve){
+        $.ajax({
+          url: url,
+          type: method || 'GET',
+          data: body ? JSON.stringify(body) : undefined,
+          contentType: body ? 'application/json' : undefined,
+          dataType: 'json',
+          headers: { 'Accept':'application/json' },
+          xhrFields: { withCredentials: true },
+          crossDomain: true,
+          success: function(data, _status, xhr){ resolve({ ok:true, status:xhr.status, data, getHeader: (n)=>xhr.getResponseHeader(n) }); },
+          error: function(xhr){
+            var payload = xhr && xhr.responseText;
+            try{ payload = JSON.parse(payload); }catch(e){}
+            resolve({ ok:false, status:xhr.status, data: payload, getHeader: (n)=>xhr.getResponseHeader(n) });
+          }
+        });
+      });
+    }
+
     async function login(){
       const username = (document.getElementById('lg-username').value || '').trim();
       const password = (document.getElementById('lg-password').value || '').trim();
@@ -91,42 +114,30 @@
         }
       }catch(e){}
 
-      const res = await fetch('/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      let data = {};
-      try { data = await res.json(); } catch(e) {}
+      async function tryLogin(endpoint){
+        return ajaxJson(endpoint, 'POST', { username, password, remember });
+      }
+      let res = await tryLogin('/auth/login');
+      let data = (res && res.data) ? res.data : {};
       if(res.ok && data && data.code === 0){
-        const adminToken = res.headers.get('X-Admin-Token');
-        const userToken = res.headers.get('X-Token');
-        const name = (data.data && data.data.username) ? data.data.username : username;
-        if(adminToken){
-          // 可选：记住登录在本地（前端），以提升体验
-          if(remember){ localStorage.setItem('adminToken', adminToken); localStorage.setItem('adminUsername', name); }
-          if(statusEl) statusEl.innerText = '登录成功，正在跳转系统管理...';
-          topRedirect('/');
-        }else if(userToken){
-          if(remember){ localStorage.setItem('userToken', userToken); localStorage.setItem('username', name); }
-          if(statusEl) statusEl.innerText = '登录成功，正在跳转首页...';
-          topRedirect('/');
-        }else{
-          // 兼容后端未设置头的情况，回退根据角色或 token 字段
-          const token = data.data && data.data.token;
-          const role = data.data && data.data.role;
-          if(role === 'SUPER_ADMIN' && token){
-            if(remember){ localStorage.setItem('adminToken', token); localStorage.setItem('adminUsername', name); }
-            topRedirect('/');
-          }else if(token){
-            if(remember){ localStorage.setItem('userToken', token); localStorage.setItem('username', name); }
-            topRedirect('/');
+        var info = data.data || {};
+        var name = info.username || username;
+        var role = info.role || '';
+        var token = info.token || '';
+        // 基于响应数据角色与 token 写入本地偏好（仅用于前端体验提升）
+        if(token){
+          if(role === 'SUPER_ADMIN'){
+            localStorage.setItem('adminToken', token);
+            localStorage.setItem('adminUsername', name);
           }else{
-            if(statusEl) statusEl.innerText = '登录成功，但未获取到令牌';
+            localStorage.setItem('userToken', token); 
+            localStorage.setItem('username', name); 
           }
         }
+        if(statusEl) statusEl.innerText = '登录成功，正在跳转...';
+        topRedirect('/');
       }else{
-        if(statusEl) statusEl.innerText = (data && data.msg) ? data.msg : '登录失败';
+        if(statusEl) statusEl.innerText = (data && data.msg) ? data.msg : ('登录失败' + (res ? ('（HTTP '+ res.status +'）') : ''));
       }
     }
   </script>
