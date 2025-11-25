@@ -13,7 +13,8 @@
     .login-row { display: grid; gap: 6px; }
     .login-input { padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px; outline: none; }
     .login-input:focus { border-color: #1890ff; }
-    .login-btn { padding: 10px 12px; border: none; border-radius: 6px; background: #1890ff; color: #fff; cursor: pointer; }
+    .login-btn { padding: 10px 12px; border: none; border-radius: 6px; background: #1890ff; color: #fff; cursor: pointer; width: 100%; }
+    .oidc-btn { width: auto; min-width: 200px; }
     .login-status { color: #666; font-size: 12px; min-height: 18px; }
     .req-star { color: #ff4d4f; margin-left: 4px; }
   </style>
@@ -37,6 +38,10 @@
         </div>
         <button class="login-btn" type="button" onclick="login()">登录</button>
         <div id="lg-status" class="login-status"></div>
+        <div class="login-row">
+          <div style="color:#888;font-size:12px;text-align:center;">其他登录</div>
+          <div id="oidc-list" style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:6px;"></div>
+        </div>
       </form>
     </div>
   </div>
@@ -140,6 +145,32 @@
         if(statusEl) statusEl.innerText = (data && data.msg) ? data.msg : ('登录失败' + (res ? ('（HTTP '+ res.status +'）') : ''));
       }
     }
+
+    // 动态加载第三方登录列表并渲染按钮
+    (async function loadOidcProviders(){
+      try{
+        const res = await ajaxJson('/auth/oidc/providers','GET');
+        const list = (res && res.data && res.data.data) ? res.data.data : [];
+        const box = document.getElementById('oidc-list');
+        if(!box) return;
+        box.innerHTML = '';
+        list.forEach(function(p){
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'login-btn oidc-btn';
+          btn.style.background = '#333';
+          btn.style.fontSize = '12px';
+          btn.style.padding = '8px 10px';
+          btn.textContent = '使用' + ((p && p.name) ? p.name : (p && p.id ? p.id : 'OIDC')) + '登录';
+          btn.onclick = function(){
+            // 使用 state 传递回调后的跳转地址
+            var next = encodeURIComponent('/');
+            window.location.href = '/auth/oidc/start?provider=' + encodeURIComponent(p.id) + '&state=' + next;
+          };
+          box.appendChild(btn);
+        });
+      }catch(e){}
+    })();
   </script>
 </body>
 </html>
