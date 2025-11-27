@@ -107,7 +107,6 @@ public class AuthController {
         switch (id.toLowerCase()){
             case "github": return "read:user user:email";
             case "google": return "openid email profile";
-            
             default: return "openid";
         }
     }
@@ -203,6 +202,13 @@ public class AuthController {
                 adminCookie.setSecure(false);
                 adminCookie.setMaxAge(maxAgeSeconds);
                 response.addCookie(adminCookie);
+                // 写入用户名 Cookie（可供前端读取展示）
+                javax.servlet.http.Cookie usernameCookie = new javax.servlet.http.Cookie("X-Username", user.getUsername());
+                usernameCookie.setPath("/");
+                usernameCookie.setHttpOnly(false);
+                usernameCookie.setSecure(false);
+                usernameCookie.setMaxAge(maxAgeSeconds);
+                response.addCookie(usernameCookie);
             }else{
                 response.setHeader("X-Token", token);
                 javax.servlet.http.Cookie userCookie = new javax.servlet.http.Cookie("X-Token", token);
@@ -211,6 +217,13 @@ public class AuthController {
                 userCookie.setSecure(false);
                 userCookie.setMaxAge(maxAgeSeconds);
                 response.addCookie(userCookie);
+                // 写入用户名 Cookie（可供前端读取展示）
+                javax.servlet.http.Cookie usernameCookie = new javax.servlet.http.Cookie("X-Username", user.getUsername());
+                usernameCookie.setPath("/");
+                usernameCookie.setHttpOnly(false);
+                usernameCookie.setSecure(false);
+                usernameCookie.setMaxAge(maxAgeSeconds);
+                response.addCookie(usernameCookie);
             }
             String next = "/";
             if(StringUtils.isNotBlank(state)){
@@ -386,6 +399,13 @@ public class AuthController {
             adminCookie.setSecure(false);
             adminCookie.setMaxAge(maxAgeSeconds);
             response.addCookie(adminCookie);
+            // 写入用户名 Cookie（可供前端读取展示）
+            javax.servlet.http.Cookie usernameCookie = new javax.servlet.http.Cookie("X-Username", user.getUsername());
+            usernameCookie.setPath("/");
+            usernameCookie.setHttpOnly(false);
+            usernameCookie.setSecure(false);
+            usernameCookie.setMaxAge(maxAgeSeconds);
+            response.addCookie(usernameCookie);
         }else{
             response.setHeader("X-Token", token);
             javax.servlet.http.Cookie userCookie = new javax.servlet.http.Cookie("X-Token", token);
@@ -394,6 +414,13 @@ public class AuthController {
             userCookie.setSecure(false);
             userCookie.setMaxAge(maxAgeSeconds);
             response.addCookie(userCookie);
+            // 写入用户名 Cookie（可供前端读取展示）
+            javax.servlet.http.Cookie usernameCookie = new javax.servlet.http.Cookie("X-Username", user.getUsername());
+            usernameCookie.setPath("/");
+            usernameCookie.setHttpOnly(false);
+            usernameCookie.setSecure(false);
+            usernameCookie.setMaxAge(maxAgeSeconds);
+            response.addCookie(usernameCookie);
         }
         System.out.println("maxAgeSeconds: " + maxAgeSeconds);
         System.out.println("resp: " + resp);
@@ -418,6 +445,13 @@ public class AuthController {
         c2.setHttpOnly(true);
         c2.setMaxAge(0);
         response.addCookie(c2);
+
+        // 清除用户名 Cookie（非 HttpOnly）
+        Cookie c3 = new Cookie("X-Username", "");
+        c3.setPath("/");
+        c3.setHttpOnly(false);
+        c3.setMaxAge(0);
+        response.addCookie(c3);
 
         return new JsonBean<>(0, "已退出", true);
     }

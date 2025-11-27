@@ -28,29 +28,37 @@
 					if(window.top){ window.top.location.replace(url); } else { window.location.replace(url); }
 				}
 
+				// 统一的 /auth/me 请求（仅发起一次），后续复用相同 Promise
+				var __authMePromise = null;
+				function fetchAuthMeOnce(){
+					if(__authMePromise){ return __authMePromise; }
+					__authMePromise = $.ajax({
+						url: '/auth/me',
+						method: 'GET',
+						headers: { 'Accept': 'application/json' },
+						xhrFields: { withCredentials: true },
+						crossDomain: true,
+						dataType: 'json'
+					});
+					return __authMePromise;
+				}
+				// 暴露到全局以便后续脚本复用同一请求
+				window.fetchAuthMeOnce = fetchAuthMeOnce;
+
 				// 步骤2：读取本地平台令牌（如后续需要可用于请求头）
 				var token = getPlatformToken();
 
-				// 步骤3：仅使用 jQuery 的 AJAX 调用 /auth/me 校验登录态
-				// 成功（已登录）：留在首页继续加载；失败：清理本地令牌并跳转登录页
-				$.ajax({
-					url: '/auth/me',
-					method: 'GET',
-					headers: { 'Accept': 'application/json' },
-					xhrFields: { withCredentials: true },
-					crossDomain: true,
-					dataType: 'json'
-				})
-				// 已登录：无操作，停留在首页即可
-				.done(function(){ /* 已登录，继续加载首页 */ })
-				.fail(function(){
-					// 未登录或校验失败：清理本地令牌并统一跳转登录页
-					try{ 
-						localStorage.removeItem('userToken'); 
-						localStorage.removeItem('adminToken'); 
-					}catch(e){}
-				topRedirect('/login.html');
-				});
+				// 步骤3：调用 /auth/me 校验登录态（只触发一次），缓存结果
+				fetchAuthMeOnce()
+					.done(function(res){ window.__AUTH_ME__ = res; /* 已登录，缓存响应以供后续使用 */ })
+					.fail(function(){
+						// 未登录或校验失败：清理本地令牌并统一跳转登录页
+						try{ 
+							localStorage.removeItem('userToken'); 
+							localStorage.removeItem('adminToken'); 
+						}catch(e){}
+						topRedirect('/login.html');
+					});
 
 			// 步骤4：配置全局 AJAX 行为
 			// 全局 AJAX 配置：
@@ -127,14 +135,38 @@
                     });
                 }
                 function initUserMenu(){
-                    var username = localStorage.getItem('adminUsername') || '未登录';
-                    var token = localStorage.getItem('adminToken') || '';
+                    // 读取 Cookie 的便捷函数（优先 Cookie，再回退 localStorage）
+                    function getCookie(name){
+                        var pattern = new RegExp('(?:^|; )' + name.replace(/[.$?*|{}()\[\]\\/\+^]/g, '\\$&') + '=([^;]*)');
+                        var match = document.cookie.match(pattern);
+                        return match ? decodeURIComponent(match[1]) : '';
+                    }
+                    var username = getCookie('X-Username') || localStorage.getItem('adminUsername') || localStorage.getItem('username') || '未登录';
+                    var token = getCookie('X-Admin-Token') || getCookie('X-Token') || localStorage.getItem('adminToken') || localStorage.getItem('userToken');
                     var nameEl = document.getElementById('nav-username');
                     var avatarEl = document.getElementById('nav-avatar');
                     if(nameEl){ nameEl.textContent = username; }
                     if(avatarEl){
                         var ch = (username && username !== '未登录') ? username.charAt(0).toUpperCase() : 'U';
                         avatarEl.textContent = ch;
+                    }
+                    // 根据角色控制“系统管理”入口显示：非超级管理员隐藏
+                    var adminEntry = document.getElementById('nav-admin');
+                    if(adminEntry){
+                        if(window.fetchAuthMeOnce){
+                            fetchAuthMeOnce().done(function(res){
+                                try{
+                                    var role = (res && (res.code === 0 || res.status === 0) && res.data) ? res.data.role : '';
+                                    if(!role || String(role).toUpperCase() !== 'SUPER_ADMIN'){
+                                        adminEntry.style.display = 'none';
+                                    }else{
+                                        adminEntry.style.display = '';
+                                    }
+                                }catch(e){ adminEntry.style.display = 'none'; }
+                            }).fail(function(){ adminEntry.style.display = 'none'; });
+                        }else{
+                            adminEntry.style.display = 'none';
+                        }
                     }
                     var logout = document.getElementById('logout-link');
                     if(logout){
